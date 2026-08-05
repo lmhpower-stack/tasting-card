@@ -18,6 +18,20 @@
   textarea{min-height:46px;resize:vertical}
   .hero textarea{min-height:60px;font-size:15px;line-height:1.5}
   input:focus,select:focus,textarea:focus{outline:2px solid #C9A44C;outline-offset:1px}
+  ::placeholder{color:rgba(231,218,189,.28)}
+  .req{color:#D3765C;margin-left:3px}
+  .missing{border-color:#D3765C !important;background:rgba(211,118,92,.08) !important}
+  #axes.missing{border:1px solid #D3765C;background:rgba(211,118,92,.08);padding:10px;border-radius:2px}
+  .reqnote{font-size:11px;color:rgba(231,218,189,.4);margin:0 0 12px}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 0}
+  .chips button{padding:5px 9px;font-size:12px;letter-spacing:0;text-transform:none;
+    border-radius:11px;border:1px solid rgba(231,218,189,.2);color:rgba(231,218,189,.72)}
+  .chips button:hover{border-color:#C9A44C;color:#C9A44C}
+  .chips button.on{background:rgba(201,164,76,.16);border-color:#C9A44C;color:#C9A44C}
+  .chips.cats{margin-top:8px;gap:4px}
+  .chips.cats button{border-radius:2px;font-size:11px;padding:4px 8px;letter-spacing:.04em;
+    border-color:transparent;color:rgba(231,218,189,.45)}
+  .chips.cats button.on{background:transparent;border-color:rgba(201,164,76,.5);color:#C9A44C}
   .check{display:flex;align-items:center;gap:9px;font-size:12px;color:rgba(231,218,189,.7);letter-spacing:.04em}
   .check input{width:16px;height:16px;accent-color:#C9A44C;padding:0}
   .axis{display:grid;grid-template-columns:1fr 84px 22px 26px;gap:8px;align-items:center;margin-bottom:7px}
@@ -50,14 +64,15 @@
 
     <section>
       <p class="legend">내 기록</p>
+      <p class="reqnote"><span class="req">*</span> 표시는 저장할 때 반드시 채워야 합니다</p>
       <div class="grid">
-        <div class="wide hero"><label for="verdict">한 줄</label>
-          <textarea id="verdict">잔을 비우고도 한참을 앉아 있었다.</textarea></div>
-        <div class="wide"><label for="nose">향</label><textarea id="nose">바닷바람과 젖은 장작, 요오드.</textarea></div>
-        <div class="wide"><label for="palate">맛</label><textarea id="palate">훈제 고기와 검은 후추, 캐러멜라이즈된 설탕.</textarea></div>
-        <div class="wide"><label for="finish">여운</label><textarea id="finish">길고 건조하게, 재의 온기가 남는다.</textarea></div>
-        <div><label for="score">내 점수</label><input id="score" value="92"></div>
-        <div><label for="taster">시음자</label><input id="taster" value="명훈"></div>
+        <div class="wide hero"><label for="verdict">한 줄 — 카드에서 가장 큰 글자<span class="req">*</span></label>
+          <textarea id="verdict" placeholder="오늘 이 잔을 한 문장으로 남긴다면"></textarea></div>
+        <div class="wide"><label for="nose">향<span class="req">*</span></label><textarea id="nose" placeholder="코를 대고 처음 떠오른 것"></textarea><div class="chips cats" id="cats-nose"></div><div class="chips" id="chips-nose"></div></div>
+        <div class="wide"><label for="palate">맛<span class="req">*</span></label><textarea id="palate" placeholder="입에 머금었을 때"></textarea><div class="chips cats" id="cats-palate"></div><div class="chips" id="chips-palate"></div></div>
+        <div class="wide"><label for="finish">여운<span class="req">*</span></label><textarea id="finish" placeholder="삼키고 나서 남는 것"></textarea><div class="chips cats" id="cats-finish"></div><div class="chips" id="chips-finish"></div></div>
+        <div><label for="score">내 점수</label><input id="score" placeholder="0~100"></div>
+        <div><label for="taster">시음자<span class="req">*</span></label><input id="taster" placeholder="이름 또는 닉네임"></div>
         <div><label for="date">시음일</label><input id="date"></div>
         <div><label for="themeSel">모임 테마</label><select id="themeSel"></select></div>
         <div class="wide" id="themeCustomBox"><label for="theme">테마 직접 입력</label><input id="theme" value="아일라 섬 한 바퀴"></div>
@@ -66,10 +81,11 @@
     </section>
 
     <section>
-      <p class="legend">맛 지도 (3~7축)</p>
+      <p class="legend">맛 지도 (3~7축)<span class="req">*</span></p>
       <div id="axes"></div>
       <datalist id="axisOptions"></datalist>
-      <div class="btns"><button id="addAxis">축 추가</button></div>
+      <div class="btns"><button id="addAxis">축 추가</button>
+        <span class="status" id="axisHint"></span></div>
     </section>
 
     <section>
@@ -87,7 +103,7 @@
         <div class="wide"><button id="resetPhoto">사진 위치 초기화</button>
           <p class="status">PC에서는 카드의 사진을 마우스로 끌어 옮길 수도 있습니다</p></div>
         <div class="wide"><label for="preset">위스키 <span id="presetCount" style="color:rgba(231,218,189,.35)"></span></label><select id="preset"></select></div>
-        <div class="wide"><label for="name">이름</label><input id="name" value="라가불린 16년"></div>
+        <div class="wide"><label for="name">이름<span class="req">*</span></label><input id="name" value="라가불린 16년"></div>
         <div class="wide"><label for="latin">영문</label><input id="latin" value="LAGAVULIN 16"></div>
         <div><label for="region">지역 · 종류</label><input id="region" value="아일라 싱글몰트"></div>
         <div><label for="abv">도수</label><input id="abv" value="43%"></div>
@@ -97,11 +113,12 @@
     </section>
 
     <section>
-      <p class="legend">프레임</p>
+      <p class="legend">프레임 색</p>
       <div class="grid">
-        <div><label for="frame">색</label>
-          <select id="frame"><option>구리</option><option selected>은</option><option>금</option><option>홀로그램</option></select></div>
-        <div><label for="season">시즌 (뒷면)</label><input id="season" value="2026 SEASON 01"></div>
+        <div class="wide">
+          <select id="frame"><option>구리</option><option selected>은</option><option>금</option><option>홀로그램</option></select>
+          <p class="status" id="seasonHint" style="margin:6px 0 0"></p>
+        </div>
       </div>
     </section>
 
@@ -130,8 +147,7 @@
     </div>
     <div class="btns">
       <button id="flip">뒷면 보기</button>
-      <button class="primary" id="savePng">저장 (사진 + 기록)</button>
-      <button id="saveBoth">앞·뒤 저장</button>
+      <button class="primary" id="savePng">저장 (앞뒤 + 기록)</button>
     </div>
     <p class="status" id="saveStatus"></p>
   </div>
@@ -156,7 +172,7 @@ const FRAMES={
 
 const FALLBACK=['피트','스모크','요오드','타르','셰리','오크','바닐라','캐러멜','과일','시트러스','건포도','꿀','단맛',
   '스파이스','후추','허브','꽃','견과','초콜릿','커피','가죽','약재','흙','바다','몰트','바디'];
-let AXIS_OPTIONS=[...FALLBACK], SHEET_WHISKIES=null;
+let AXIS_OPTIONS=[...FALLBACK], AXIS_META=null, SHEET_WHISKIES=null;
 let axes=[{n:'피트',v:10},{n:'셰리',v:4},{n:'과일',v:4},{n:'바닐라',v:4},{n:'스파이스',v:6}];
 
 const PRESETS={
@@ -172,7 +188,10 @@ const PRESETS={
   axes:[['과일',10],['바닐라',8],['꿀',8],['스파이스',6],['오크',6]]}
 };
 
-function renderOptions(){$('axisOptions').innerHTML=AXIS_OPTIONS.map(o=>`<option value="${o}">`).join('');}
+function renderOptions(){
+  $('axisOptions').innerHTML=AXIS_OPTIONS.map(o=>`<option value="${o}">`).join('');
+  if($('axisHint')) $('axisHint').textContent=`축 후보 ${AXIS_OPTIONS.length}개 — 목록에 없는 이름도 직접 쓸 수 있습니다`;
+}
 function renderAxes(){
   const b=$('axes');b.innerHTML='';
   axes.forEach((a,i)=>{
@@ -184,10 +203,13 @@ function renderAxes(){
   });
   $('addAxis').disabled=axes.length>=7;
 }
+let axesTouched=false;
 $('axes').addEventListener('input',e=>{
   const t=e.target;
   if(t.dataset.ax!==undefined)axes[+t.dataset.ax].n=t.value;
-  if(t.dataset.axv!==undefined){axes[+t.dataset.axv].v=+t.value;t.nextElementSibling.textContent=t.value;}
+  if(t.dataset.axv!==undefined){axes[+t.dataset.axv].v=+t.value;t.nextElementSibling.textContent=t.value;axesTouched=true;}
+  if(axesTouched&&axes.every(a=>a.n.trim())) $('axes').classList.remove('missing');
+  if(t.dataset.ax!==undefined) renderChips();
   draw();
 });
 $('axes').addEventListener('click',e=>{
@@ -201,8 +223,90 @@ $('addAxis').addEventListener('click',()=>{
   renderAxes();draw();
 });
 
+/* ─────────────────────────────────────────────
+   테이스팅 노트 어휘
+   위스키 플레이버 휠(MacLean/SWRI)의 8개 계열을
+   한국어 표현으로 옮기고, 질감·여운 길이를 따로 뒀다.
+   ───────────────────────────────────────────── */
+const VOCAB={
+  nose:[
+    ['과일',   ['사과','배','복숭아','레몬','오렌지 껍질','파인애플','바나나','건포도','무화과','말린 살구','자두']],
+    ['꽃·풀',  ['헤더','장미','라벤더','갓 벤 풀','건초','솔잎','이끼']],
+    ['곡물',   ['보리','비스킷','갓 구운 빵','오트밀','누룽지','맥아']],
+    ['나무',   ['바닐라','캐러멜','오크','삼나무','시가 박스','코코아','가죽']],
+    ['훈연',   ['모닥불','숯불','젖은 장작','재','타르','훈제 고기','그을음']],
+    ['약재·바다',['소독약','요오드','반창고','바닷바람','소금기','미역','젖은 돌']],
+    ['향신료', ['후추','계피','정향','생강','육두구','한약','아니스']],
+    ['단내',   ['꿀','흑설탕','토피','초콜릿','메이플','바닐라 크림']]
+  ],
+  palate:[
+    ['질감',   ['가볍다','부드럽다','묵직하다','기름지다','크리미하다','거칠다']],
+    ['단맛',   ['꿀','캐러멜','흑설탕','바닐라','말린 과일','토피','메이플']],
+    ['과일',   ['사과','자두','오렌지','체리','건포도','파인애플','레몬']],
+    ['나무·향신료',['오크','후추','계피','정향','생강','탄닌','삼나무']],
+    ['훈연',   ['재','숯','훈제 고기','타르','그을린 나무','베이컨']],
+    ['쓴맛·산미',['다크 초콜릿','에스프레소','감초','자몽 껍질','풋사과','한약']],
+    ['알코올', ['알코올이 튄다','따끔하다','잘 눌려 있다','도수가 숨어 있다']]
+  ],
+  finish:[
+    ['길이',   ['짧다','보통이다','길다','아주 길다']],
+    ['감각',   ['따뜻하다','드라이하다','깔끔하다','진득하다','매끈하다','조인다']],
+    ['남는 맛',['스모키','스파이시','쌉싸름','단맛','소금기','오크','재의 온기']]
+  ]
+};
+
+const CHIP_FIELDS=['nose','palate','finish'];
+let activeCat={nose:0,palate:0,finish:0};
+
+/* 어휘의 출처는 시트다. 시트가 붙으면 시트 것만 쓰고,
+   연결 전에는 아래 내장 목록(VOCAB)으로 버틴다. */
+function groupsFor(fid){
+  if(AXIS_META&&AXIS_META.length){
+    const mine=AXIS_META.filter(a=>(a.st||['nose','palate']).includes(fid));
+    const byGroup={};
+    mine.forEach(a=>{(byGroup[a.g||'기타']=byGroup[a.g||'기타']||[]).push(a.n);});
+    const keys=Object.keys(byGroup);
+    if(keys.length) return keys.map(k=>[k,byGroup[k]]);
+  }
+  return VOCAB[fid].slice();
+}
+function partsOf(fid){
+  return $(fid).value.split(/\s*,\s*/).map(x=>x.trim()).filter(Boolean);
+}
+function renderChips(){
+  CHIP_FIELDS.forEach(fid=>{
+    const catBox=$('cats-'+fid), box=$('chips-'+fid);
+    if(!catBox||!box) return;
+    const gs=groupsFor(fid);
+    if(activeCat[fid]>=gs.length) activeCat[fid]=0;
+    catBox.innerHTML=gs.map((g,i)=>
+      `<button type="button" class="cat${i===activeCat[fid]?' on':''}" data-cat="${i}" data-f="${fid}">${g[0]}</button>`
+    ).join('');
+    const cur=partsOf(fid);
+    box.innerHTML=gs[activeCat[fid]][1].map(w=>
+      `<button type="button" data-w="${w}" data-f="${fid}" class="${cur.includes(w)?'on':''}">${w}</button>`
+    ).join('');
+  });
+}
+function toggleWord(fid,w){
+  const el=$(fid);
+  let parts=partsOf(fid);
+  parts = parts.includes(w) ? parts.filter(x=>x!==w) : parts.concat(w);
+  el.value=parts.join(', ');
+  el.classList.toggle('missing',!el.value.trim());
+  renderChips();draw();
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('.chips button');if(!b)return;
+  if(b.dataset.cat!==undefined){ activeCat[b.dataset.f]=+b.dataset.cat; renderChips(); return; }
+  toggleWord(b.dataset.f,b.dataset.w);
+});
+CHIP_FIELDS.forEach(fid=>{
+  document.addEventListener('input',e=>{ if(e.target.id===fid) renderChips(); });
+});
+
 function setStatus(m,c){const s=$('status');s.textContent=m;s.className='status '+(c||'');}
-function applyOptions(l){AXIS_OPTIONS=[...new Set(l.map(x=>String(x).trim()).filter(Boolean))];if(!AXIS_OPTIONS.length)AXIS_OPTIONS=[...FALLBACK];renderOptions();}
+function applyOptions(l){AXIS_OPTIONS=[...new Set(l.map(x=>String(x).trim()).filter(Boolean))];if(!AXIS_OPTIONS.length)AXIS_OPTIONS=[...FALLBACK];renderOptions();renderChips();}
 async function loadSheet(){
   const url=$('api').value.trim();if(!url){setStatus('웹앱 주소를 넣어주세요','err');return;}
   if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(url)){
@@ -229,6 +333,7 @@ async function loadSheet(){
     return;
   }
   if(j.ok===false){ setStatus('스크립트 오류 — '+(j.error||'원인 불명'),'err');return; }
+  if(j.axisMeta&&j.axisMeta.length) AXIS_META=j.axisMeta;
   if(j.axisOptions)applyOptions(j.axisOptions);
   if(j.whiskies&&j.whiskies.length) SHEET_WHISKIES=j.whiskies;
   if(j.themes&&j.themes.length) SHEET_THEMES=j.themes;
@@ -301,7 +406,15 @@ function loadWhisky(){
   if(!p)return;
   $('name').value=k;
   ['latin','region','abv','age','cask'].forEach(f=>{ if(p[f]!==undefined) $(f).value=p[f]; });
-  if(p.axes&&p.axes.length){axes=p.axes.map(([n,v])=>({n,v:+v}));renderAxes();}
+  if(p.axes&&p.axes.length){
+    axes=p.axes.map(([n,v])=>({n,v:+v}));
+  }else{
+    // 시트 위스키는 맛 값이 없다 — 앞 병의 점수가 남지 않게 중간으로 되돌린다
+    axes=axes.map(a=>({n:a.n,v:5}));
+  }
+  axesTouched=false;
+  renderChips();
+  renderAxes();
   draw();
 }
 
@@ -346,9 +459,19 @@ document.addEventListener('paste',e=>{
 });
 document.addEventListener('input',e=>{if(e.target.type!=='file'&&!e.target.closest('#axes'))draw();});
 
+/* 시즌은 시음일에서 뽑는다 — 분기 기준 */
+function seasonOf(dateStr){
+  const m=/(\d{4})[.\-/\s]*(\d{1,2})/.exec(String(dateStr||''));
+  const now=new Date();
+  const y=m?+m[1]:now.getFullYear();
+  const mo=m?+m[2]:now.getMonth()+1;
+  const q=Math.min(4,Math.max(1,Math.ceil(mo/3)));
+  return `${y} SEASON ${String(q).padStart(2,'0')}`;
+}
+
 function data(){
   const F=FRAMES[$('frame').value]||FRAMES['은'];
-  return {F,season:$('season').value,
+  return {F,season:seasonOf($('date').value),
     verdict:$('verdict').value,nose:$('nose').value,palate:$('palate').value,finish:$('finish').value,
     score:$('score').value,taster:$('taster').value,date:$('date').value,theme:$('theme').value,
     name:$('name').value,latin:$('latin').value,region:$('region').value,
@@ -509,7 +632,8 @@ function drawFront(d){
   holoBands(px,py,pw,ph,T.holo*.5);
   ctx.strokeStyle=metal(px,py,px+pw,py+ph,T.stops);ctx.lineWidth=4;rrect(px,py,pw,ph,18);ctx.stroke();
 
-  /* 점수 메달 */
+  /* 점수 메달 — 비어 있으면 생략 */
+  if(d.score.trim()){
   const sx=R-92,sy=py+ph-66;
   ctx.save();ctx.shadowColor='rgba(0,0,0,.7)';ctx.shadowBlur=20;
   ctx.fillStyle=metal(sx-80,sy-80,sx+80,sy+80,T.stops);ctx.beginPath();ctx.arc(sx,sy,80,0,7);ctx.fill();ctx.restore();
@@ -517,6 +641,7 @@ function drawFront(d){
   ctx.strokeStyle=ACC;ctx.lineWidth=2;ctx.beginPath();ctx.arc(sx,sy,59,0,7);ctx.stroke();
   text(d.score,sx,sy+12,{size:56,weight:700,color:INK,align:'center'});
   text('내 점수',sx,sy+40,{size:14,weight:600,spacing:2,color:MUT,align:'center'});
+  }
 
   /* 이름 */
   let y=py+ph+62;
@@ -529,12 +654,16 @@ function drawFront(d){
   y+=16;ctx.fillStyle=metal(M,y+10,R,y+12,T.stops);ctx.fillRect(M,y+10,R-M,2);
 
   /* 한 줄 */
-  y+=74;
-  ctx.save();ctx.globalAlpha=.32;text('“',M-4,y+4,{size:84,weight:700,family:SERIF,color:ACC});ctx.restore();
-  let vs=38,vl=wrap(d.verdict,R-M-70,vs,400,SERIF);
-  while(vl.length>2&&vs>26){vs-=2;vl=wrap(d.verdict,R-M-70,vs,400,SERIF);}
-  vl.slice(0,2).forEach(l=>{text(l,M+54,y,{size:vs,family:SERIF,color:INK});y+=vs*1.4;});
-  y+=26;
+  if(d.verdict.trim()){
+    y+=74;
+    ctx.save();ctx.globalAlpha=.32;text('“',M-4,y+4,{size:84,weight:700,family:SERIF,color:ACC});ctx.restore();
+    let vs=38,vl=wrap(d.verdict,R-M-70,vs,400,SERIF);
+    while(vl.length>2&&vs>26){vs-=2;vl=wrap(d.verdict,R-M-70,vs,400,SERIF);}
+    vl.slice(0,2).forEach(l=>{text(l,M+54,y,{size:vs,family:SERIF,color:INK});y+=vs*1.4;});
+    y+=26;
+  }else{
+    y+=60;
+  }
 
   /* 스펙 */
   const cells=[['지역',d.region],['도수',d.abv],['숙성',d.age],['캐스크',d.cask]].filter(c=>c[1]);
@@ -574,7 +703,7 @@ function drawFront(d){
   const fy=Hc-96;
   ctx.fillStyle=metal(M,fy-36,R,fy-34,T.stops);ctx.fillRect(M,fy-36,R-M,1.5);
   if(d.theme)text(d.theme,M,fy,{size:18,weight:500,spacing:2,color:MUT});
-  text(`${d.taster}  ·  ${d.date}`,R,fy,{size:26,family:SERIF,color:'rgba(255,248,235,.88)',align:'right'});
+  text(d.taster.trim()?`${d.taster}  ·  ${d.date}`:d.date,R,fy,{size:26,family:SERIF,color:'rgba(255,248,235,.88)',align:'right'});
   text('부천 위스키 클럽',R,fy+34,{size:13,weight:600,spacing:5,color:'rgba(255,248,235,.3)',align:'right'});
 }
 
@@ -623,11 +752,12 @@ function drawBack(d){
   text(d.season,cx,1234,{size:20,weight:700,spacing:8,color:ACC,align:'center'});
   const nm=fit(d.name,R-M,26,18,600,SERIF);
   text(nm.line,cx,1300,{size:nm.size,weight:600,family:SERIF,color:'rgba(255,248,235,.6)',align:'center'});
-  text(`${d.taster}  ·  ${d.date}`,cx,1354,{size:24,family:SERIF,color:'rgba(255,248,235,.8)',align:'center'});
+  text(d.taster.trim()?`${d.taster}  ·  ${d.date}`:d.date,cx,1354,{size:24,family:SERIF,color:'rgba(255,248,235,.8)',align:'center'});
 }
 
 function draw(){
   const d=data();
+  if($('seasonHint')) $('seasonHint').textContent=`뒷면 시즌 표기 — ${d.season} (시음일에서 자동)`;
   ctx.clearRect(0,0,W,Hc);ctx.textBaseline='alphabetic';
   side==='front'?drawFront(d):drawBack(d);
   grain(.05);
@@ -655,24 +785,63 @@ $('flip').addEventListener('click',()=>{
   draw();
 });
 function save(label){
-  cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);
-    a.download=`시음카드_${$('name').value.replace(/\s+/g,'')}_${$('taster').value}_${label}.png`;
-    a.click();URL.revokeObjectURL(a.href);});
+  return new Promise(res=>{
+    cv.toBlob(b=>{
+      const a=document.createElement('a');a.href=URL.createObjectURL(b);
+      const who=$('taster').value.trim();
+      a.download=`시음카드_${$('name').value.replace(/\s+/g,'')}${who?'_'+who:''}_${label}.png`;
+      a.click();URL.revokeObjectURL(a.href);res();
+    });
+  });
 }
-$('savePng').addEventListener('click',()=>{
-  save(side==='front'?'앞면':'뒷면');
-  saveToSheet();
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const REQUIRED=[['taster','시음자'],['name','위스키 이름'],['verdict','한 줄'],
+  ['nose','향'],['palate','맛'],['finish','여운']];
+
+function checkRequired(){
+  const miss=[];
+  REQUIRED.forEach(([id,label])=>{
+    const el=$(id), empty=!el.value.trim();
+    el.classList.toggle('missing',empty);
+    if(empty) miss.push({el,label});
+  });
+  // 맛 지도 — 축 이름이 다 있고, 슬라이더를 한 번은 움직여야 한다
+  const axesBad=!axesTouched||axes.some(a=>!a.n.trim());
+  $('axes').classList.toggle('missing',axesBad);
+  if(axesBad) miss.push({el:$('axes'),label:axesTouched?'맛 지도 축 이름':'맛 지도'});
+  return miss;
+}
+document.addEventListener('input',e=>{
+  if(REQUIRED.some(([id])=>id===e.target.id)&&e.target.value.trim())
+    e.target.classList.remove('missing');
 });
-$('saveBoth').addEventListener('click',()=>{
-  const cur=side;
-  side='front';draw();save('앞면');
-  setTimeout(()=>{side='back';draw();save('뒷면');
-    setTimeout(()=>{side=cur;$('flip').textContent=side==='front'?'뒷면 보기':'앞면 보기';draw();},350);},350);
+
+$('savePng').addEventListener('click',async e=>{
+  const miss=checkRequired();
+  if(miss.length){
+    const st=$('saveStatus');
+    st.textContent=`${miss.map(m=>m.label).join(' · ')} — 채워야 저장됩니다`;
+    st.className='status err';
+    miss[0].el.scrollIntoView({behavior:'smooth',block:'center'});
+    miss[0].el.focus({preventScroll:true});
+    return;
+  }
+  const btn=e.target,cur=side,st=$('saveStatus');
+  btn.disabled=true;
+  st.textContent='앞면 만드는 중…';st.className='status';
+  side='front';draw();await save('앞면');
+  await wait(400);
+  st.textContent='뒷면 만드는 중…';
+  side='back';draw();await save('뒷면');
+  await wait(400);
+  side=cur;$('flip').textContent=side==='front'?'뒷면 보기':'앞면 보기';draw();
+  btn.disabled=false;
+  saveToSheet();
 });
 async function saveToSheet(){
   const url=$('api').value.trim(),st=$('saveStatus'),d=data();
-  if(!url){st.textContent='사진만 저장됨 — 시트가 연결되지 않았습니다';st.className='status err';return;}
-  if(!d.taster.trim()){st.textContent='사진만 저장됨 — 시음자 이름이 비어 있어 기록은 남기지 않았습니다';st.className='status err';return;}
+  if(!url){st.textContent='카드만 저장됨 — 시트가 연결되지 않았습니다';st.className='status err';return;}
+  if(!d.taster.trim()){st.textContent='카드만 저장됨 — 시음자 이름이 비어 있어 기록은 남기지 않았습니다';st.className='status err';return;}
   st.textContent='기록 저장 중…';st.className='status';
   try{
     const body={date:d.date,taster:d.taster,name:d.name,verdict:d.verdict,nose:d.nose,
@@ -680,10 +849,10 @@ async function saveToSheet(){
       axes:d.labels.map((n,i)=>[n,d.vals[i]])};
     const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
     const j=await r.json();
-    if(j.ok){st.textContent=j.updated?`사진 저장 · 기록 갱신됨 (${j.row}행 — 같은 날 같은 병)`:`사진 저장 · 기록 남김 (${j.row}행)`;st.className='status ok';}
-    else{st.textContent='사진은 저장됨 · 기록 실패 — '+(j.error||'알 수 없는 오류');st.className='status err';}
+    if(j.ok){st.textContent=j.updated?`앞뒤 저장 · 기록 갱신됨 (${j.row}행 — 같은 날 같은 병)`:`앞뒤 저장 · 기록 남김 (${j.row}행)`;st.className='status ok';}
+    else{st.textContent='앞뒤는 저장됨 · 기록 실패 — '+(j.error||'알 수 없는 오류');st.className='status err';}
   }catch(e){
-    st.textContent='사진은 저장됨 · 기록 실패 — 네트워크가 막혔거나 배포 권한이 "모든 사용자"가 아닙니다';
+    st.textContent='앞뒤는 저장됨 · 기록 실패 — 네트워크가 막혔거나 배포 권한이 "모든 사용자"가 아닙니다';
     st.className='status err';
   }
 }
@@ -724,7 +893,7 @@ const CONFIG={ API:'https://script.google.com/macros/s/AKfycbwe6ki74g4Rwgf-nOxNB
 const Q=new URLSearchParams(location.search);
 if(Q.get('api')||CONFIG.API) $('api').value=Q.get('api')||CONFIG.API;
 
-renderOptions();renderAxes();fillTheme();fillPreset();
+renderOptions();renderAxes();renderChips();fillTheme();fillPreset();
 
 /* 주소가 미리 박혀 있거나 링크로 넘어오면 열자마자 자동 연결 */
 if($('api').value.trim()){
