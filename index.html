@@ -92,7 +92,9 @@
       <p class="legend">병</p>
       <div class="grid">
         <div class="wide"><label for="photo">병 사진</label><input type="file" id="photo" accept="image/*">
-          <p class="status" id="photoStatus">파일 선택 · 사진 끌어다 놓기 · 붙여넣기(Ctrl+V) 모두 됩니다</p></div>
+          <input type="file" id="photoAny" style="display:none">
+          <div class="btns" style="margin:8px 0 0"><button id="pickAny">다른 앱에서 고르기</button></div>
+          <p class="status" id="photoStatus">모바일에서 갤러리가 안 보이면 위 버튼을 눌러보세요 · 끌어다 놓기 · 붙여넣기도 됩니다</p></div>
         <div class="wide"><button id="clearPhoto">사진 지우기</button></div>
         <div><label for="pmode">맞춤</label>
           <select id="pmode"><option value="cover">채우기 (잘림)</option><option value="contain">전체 보이기</option></select></div>
@@ -455,14 +457,22 @@ function loadPhotoFile(f){
       st.textContent=`적용됨 — ${f.name||'사진'} (${img.width}×${img.height}) · 자동 맞춤 ${$('pzoom').value}%`;
       st.className='status ok';
     };
-    img.onerror=()=>{st.textContent='사진을 불러오지 못했습니다 (지원하지 않는 형식일 수 있습니다)';st.className='status err';};
+    img.onerror=()=>{
+      st.textContent=/\.(heic|heif)$/i.test(f.name||'')
+        ? 'HEIC 사진은 브라우저가 못 엽니다 — 아이폰 설정 > 카메라 > 포맷을 "높은 호환성"으로 바꾸거나 캡처해서 올리세요'
+        : '사진을 불러오지 못했습니다 (지원하지 않는 형식일 수 있습니다)';
+      st.className='status err';
+    };
     img.src=fr.result;
   };
   fr.readAsDataURL(f);
 }
 $('photo').addEventListener('change',e=>{if(e.target.files[0])loadPhotoFile(e.target.files[0]);});
+/* accept 를 걸지 않은 입력 — 갤러리·구글포토·드라이브까지 선택지에 나온다 */
+$('photoAny').addEventListener('change',e=>{if(e.target.files[0])loadPhotoFile(e.target.files[0]);});
+$('pickAny').addEventListener('click',()=>$('photoAny').click());
 $('clearPhoto').addEventListener('click',()=>{
-  photo=null;$('photo').value='';draw();
+  photo=null;$('photo').value='';$('photoAny').value='';draw();
   $('photoStatus').textContent='사진 없음';$('photoStatus').className='status';
 });
 ['dragover','drop'].forEach(ev=>document.addEventListener(ev,e=>{
