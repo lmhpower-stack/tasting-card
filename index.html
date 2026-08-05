@@ -60,8 +60,8 @@
 <div id="inapp" style="display:none;max-width:1160px;margin:0 auto 18px;padding:14px 16px;
      border:1px solid rgba(211,118,92,.5);background:rgba(211,118,92,.1);border-radius:3px">
   <p style="margin:0 0 8px;font-size:13px;line-height:1.6">
-    <b>카카오톡 안에서 열렸습니다.</b> 여기서는 파일 저장이 막힐 수 있습니다.<br>
-    저장이 안 되면 아래 <b>브라우저로 열기</b>를 눌러주세요.
+    <b>카카오톡 안에서 열렸습니다.</b> 여기서는 이미지 저장이 막힙니다.<br>
+    아래 <b>브라우저로 열기</b>를 한 번 누르면 그 뒤로는 정상 동작합니다.
   </p>
   <div class="btns" style="margin:0">
     <button id="openExt">브라우저로 열기</button>
@@ -183,9 +183,11 @@
     </div>
     <div class="btns">
       <button id="flip">뒷면 보기</button>
-      <button class="primary" id="savePng">저장 (앞뒤 + 기록)</button>
+      <button class="primary" id="savePng">저장 · 공유</button>
     </div>
     <p class="status" id="saveStatus"></p>
+    <p class="status" id="mobileTip" style="display:none">
+      저장을 누르면 공유창이 뜹니다 — <b>이미지 저장</b>이면 갤러리로, 인스타를 고르면 바로 올라갑니다</p>
 
   </div>
 </div>
@@ -2328,15 +2330,11 @@ function checkRequired(){
     el.classList.toggle('missing',empty);
     if(empty) miss.push({el,label});
   });
-  // 맛 지도 — 축 이름이 다 있어야 하고, 값이 기본값 그대로면 아직 안 매긴 것으로 본다
+  // 맛 지도는 축 이름만 확인한다.
+  // 값은 손대지 않아도 통과 — 5는 '보통'이라는 뜻이지 빈칸이 아니다.
   const noName=!axes.length||axes.some(a=>!a.n.trim());
-  const untouched=!axesTouched&&axes.every(a=>a.v===5);
-  const axesBad=noName||untouched;
-  $('axes').classList.toggle('missing',axesBad);
-  if(axesBad) miss.push({
-    el:$('axes'),
-    label: noName ? '맛 지도 축 이름' : '맛 지도(슬라이더를 움직여 주세요)'
-  });
+  $('axes').classList.toggle('missing',noName);
+  if(noName) miss.push({el:$('axes'),label:'맛 지도 축 이름'});
   return miss;
 }
 document.addEventListener('input',e=>{
@@ -2344,12 +2342,16 @@ document.addEventListener('input',e=>{
     e.target.classList.remove('missing');
 });
 
+const MOBILE=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');
+if(MOBILE) $('mobileTip').style.display='';
+let lastFiles=null;
+let lastBlobs=null;
+
 $('savePng').addEventListener('click',async e=>{
   const miss=checkRequired();
   if(miss.length){
     const st=$('saveStatus');
     st.textContent=`${miss.map(m=>m.label).join(' · ')} — 채워야 저장됩니다`;
-    if($('axes').classList.contains('missing')) $('axisHint').textContent='슬라이더를 하나라도 움직이면 통과합니다';
     st.className='status err';
     miss[0].el.scrollIntoView({behavior:'smooth',block:'center'});
     miss[0].el.focus({preventScroll:true});
@@ -2360,34 +2362,48 @@ $('savePng').addEventListener('click',async e=>{
   btn.disabled=true;
   const unlock=setTimeout(()=>{btn.disabled=false;},12000);   // 무슨 일이 있어도 12초 뒤 해제
   try{
-  st.textContent='앞면 만드는 중…';st.className='status';
-  side='front';draw();const fb=await blobNow();
-  await wait(120);
-  st.textContent='뒷면 만드는 중…';
-  side='back';draw();const bb=await blobNow();
+  // 다운로드는 '방금 누른 동작'에서만 허용된다.
+  // 네트워크를 먼저 기다리면 그 권한이 만료돼 조용히 막히므로, 파일부터 내려받는다.
+  st.textContent='카드 만드는 중…';st.className='status';
+
+  side='front';draw();
+  const fb=await blobNow();
+  side='back';draw();
+  const bb=await blobNow();
   side=cur;$('flip').textContent=side==='front'?'뒷면 보기':'앞면 보기';draw();
 
+  lastFiles=[new File([fb],fileName('앞면'),{type:'image/png'}),
+             new File([bb],fileName('뒷면'),{type:'image/png'})];
+  lastBlobs=[fb,bb];
 
-  const files=[new File([fb],fileName('앞면'),{type:'image/png'}),
-               new File([bb],fileName('뒷면'),{type:'image/png'})];
+  if(!axesTouched&&axes.every(a=>a.v===5))
+    $('axisHint').textContent='맛 지도가 전부 보통(5)입니다 — 필요하면 슬라이더로 조정하세요';
 
-  let shared=false, shareErr='';
-  if(navigator.canShare&&navigator.canShare({files})){
-    try{ await navigator.share({files,title:'시음카드'}); shared=true; }
-    catch(err){
-      if(err&&err.name==='AbortError') shared=true;      // 사용자가 닫음
-      else shareErr=(err&&err.name)||'실패';              // 권한 만료 등
+  // 공유창이 앞뒤 두 장을 한 번에 넘긴다. 저장할지 바로 올릴지는 거기서 고른다.
+  const KAKAO_MSG='카카오톡 안에서는 막힙니다 — 맨 위 [브라우저로 열기]를 눌러주세요';
+  if(navigator.canShare&&navigator.canShare({files:lastFiles})){
+    st.textContent='공유창 여는 중…';
+    try{
+      await navigator.share({files:lastFiles,title:'시음카드'});
+      st.textContent='공유창에서 [이미지 저장]을 고르면 갤러리에 들어갑니다';
+      st.className='status ok';
+    }catch(err){
+      if(err&&err.name==='AbortError'){ st.textContent='공유를 취소했습니다';st.className='status'; }
+      else if(INAPP){ st.textContent=KAKAO_MSG;st.className='status err';
+                      $('inapp').scrollIntoView({behavior:'smooth',block:'start'}); }
+      else{ download(fb,'앞면');
+            st.textContent='공유창을 열지 못해 앞면을 내려받았습니다';st.className='status err'; }
     }
+  }else if(INAPP){
+    st.textContent=KAKAO_MSG;st.className='status err';
+    $('inapp').scrollIntoView({behavior:'smooth',block:'start'});
+  }else{
+    download(fb,'앞면');
+    st.textContent='앞면을 내려받았습니다';st.className='status ok';
   }
-  // 내장 브라우저의 다운로드는 성공 여부를 알 수 없어 시도하지 않는다
-  if(!shared&&!INAPP){ download(fb,'앞면'); await wait(500); download(bb,'뒷면'); }
 
-  st.textContent = shared ? '공유창에서 사진에 저장을 고르세요'
-    : shareErr ? '공유창을 열지 못했습니다 — 크롬·사파리로 열어주세요'
-    : INAPP ? '저장이 막혔습니다 — 위의 [브라우저로 열기]를 눌러주세요'
-    : '내려받았습니다';
-  st.className='status ok';
-  saveToSheet();
+  // ③ 기록은 마지막에 — 실패해도 파일은 이미 받았다
+  await saveToSheet();
   }catch(err){
     side=cur;draw();
     st.textContent='카드를 만들지 못했습니다 — '+(err&&err.message?err.message:err);
@@ -2407,12 +2423,18 @@ async function saveToSheet(){
     const body={date:d.date,taster:d.taster,name:d.name,verdict:d.verdict,nose:d.nose,
       palate:d.palate,finish:d.finish,score:d.score,theme:d.theme,
       axes:d.labels.map((n,i)=>[n,d.vals[i]])};
-    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
+    let r,lastErr;
+    for(let attempt=0;attempt<2;attempt++){
+      try{ r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+                              body:JSON.stringify(body)}); lastErr=null; break; }
+      catch(e){ lastErr=e; await new Promise(res=>setTimeout(res,1500)); }
+    }
+    if(lastErr) throw lastErr;
     const j=await r.json();
-    if(j.ok){st.textContent=j.updated?`앞뒤 저장 · 기록 갱신됨 (${j.row}행 — 같은 날 같은 병)`:`앞뒤 저장 · 기록 남김 (${j.row}행)`;st.className='status ok';}
-    else{st.textContent='앞뒤는 저장됨 · 기록 실패 — '+(j.error||'알 수 없는 오류');st.className='status err';}
+    if(j.ok){st.textContent=j.updated?`기록 갱신됨 (${j.row}행 — 같은 날 같은 병)`:`기록 남김 (${j.row}행)`;st.className='status ok';}
+    else{st.textContent='기록 실패 — '+(j.error||'알 수 없는 오류');st.className='status err';}
   }catch(e){
-    st.textContent='앞뒤는 저장됨 · 기록 실패 — 네트워크가 막혔거나 배포 권한이 "모든 사용자"가 아닙니다';
+    st.textContent='기록 실패 ('+((e&&e.name)||e)+') — 잠시 뒤 [저장]을 다시 누르면 그 줄이 갱신됩니다';
     st.className='status err';
   }
 }
@@ -2430,13 +2452,18 @@ if(INAPP){
   $('inapp').style.display='';
   $('openExt').addEventListener('click',()=>{
     const url=location.href;
+    // 카카오톡은 바깥 브라우저로 넘기는 자체 명령을 지원한다
+    if(/KAKAOTALK/i.test(UA)){
+      location.href='kakaotalk://web/openExternal?url='+encodeURIComponent(url);
+      return;
+    }
     if(ANDROID){
       location.href='intent://'+url.replace(/^https?:\/\//,'')
         +'#Intent;scheme=https;package=com.android.chrome;end';
-    }else{
-      $('inappHint').textContent='우측 하단 나침반 아이콘(사파리로 열기)을 눌러주세요';
-      $('inappHint').className='status err';
+      return;
     }
+    $('inappHint').textContent='우측 하단 공유 아이콘 → [Safari로 열기]를 눌러주세요';
+    $('inappHint').className='status err';
   });
   $('copyUrl').addEventListener('click',async()=>{
     try{ await navigator.clipboard.writeText(location.href);
