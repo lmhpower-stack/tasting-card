@@ -60,8 +60,9 @@
 <div id="inapp" style="display:none;max-width:1160px;margin:0 auto 18px;padding:14px 16px;
      border:1px solid rgba(211,118,92,.5);background:rgba(211,118,92,.1);border-radius:3px">
   <p style="margin:0 0 8px;font-size:13px;line-height:1.6">
-    <b>카카오톡 안에서 열렸습니다.</b> 여기서는 이미지 저장이 막힙니다.<br>
-    아래 <b>브라우저로 열기</b>를 한 번 누르면 그 뒤로는 정상 동작합니다.
+    <b>카카오톡 안에서 열렸습니다.</b> 저장을 누르면 카드가 화면에 나오니
+    <b>길게 눌러 저장</b>하시면 됩니다.<br>
+    더 편하게 쓰시려면 아래 <b>브라우저로 열기</b>를 한 번 눌러주세요.
   </p>
   <div class="btns" style="margin:0">
     <button id="openExt">브라우저로 열기</button>
@@ -186,6 +187,15 @@
       <button class="primary" id="savePng">저장 · 공유</button>
     </div>
     <p class="status" id="saveStatus"></p>
+    <div id="kakaoOut" style="display:none;width:100%;max-width:430px;margin-top:6px">
+      <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#C9A44C">
+        카카오톡 안에서는 이 방법으로 저장합니다<br>
+        <b>이미지를 길게 누르기 → 이미지 저장</b></p>
+      <p class="status" style="margin:0 0 6px">앞면</p>
+      <img id="kkFront" style="width:100%;border-radius:6px;display:block;margin-bottom:14px">
+      <p class="status" style="margin:0 0 6px">뒷면</p>
+      <img id="kkBack" style="width:100%;border-radius:6px;display:block">
+    </div>
     <p class="status" id="mobileTip" style="display:none">
       저장을 누르면 공유창이 뜹니다 — <b>이미지 저장</b>이면 갤러리로, 인스타를 고르면 바로 올라갑니다</p>
 
@@ -2379,8 +2389,17 @@ $('savePng').addEventListener('click',async e=>{
   if(!axesTouched&&axes.every(a=>a.v===5))
     $('axisHint').textContent='맛 지도가 전부 보통(5)입니다 — 필요하면 슬라이더로 조정하세요';
 
-  // 공유창이 앞뒤 두 장을 한 번에 넘긴다. 저장할지 바로 올릴지는 거기서 고른다.
-  const KAKAO_MSG='카카오톡 안에서는 막힙니다 — 맨 위 [브라우저로 열기]를 눌러주세요';
+  // 카카오톡 안에서는 다운로드도 공유도 막힌다.
+  // 길게 눌러 저장하는 것만 통하므로 이미지를 화면에 내놓는다.
+  function showForLongPress(){
+    side='front';draw();const f=cv.toDataURL('image/png');
+    side='back';draw();const b=cv.toDataURL('image/png');
+    side=cur;draw();
+    $('kkFront').src=f;$('kkBack').src=b;
+    $('kakaoOut').style.display='';
+    $('kakaoOut').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  const KAKAO_MSG='카카오톡 안에서는 아래 이미지를 길게 눌러 저장하세요';
   if(navigator.canShare&&navigator.canShare({files:lastFiles})){
     st.textContent='공유창 여는 중…';
     try{
@@ -2389,14 +2408,13 @@ $('savePng').addEventListener('click',async e=>{
       st.className='status ok';
     }catch(err){
       if(err&&err.name==='AbortError'){ st.textContent='공유를 취소했습니다';st.className='status'; }
-      else if(INAPP){ st.textContent=KAKAO_MSG;st.className='status err';
-                      $('inapp').scrollIntoView({behavior:'smooth',block:'start'}); }
+      else if(INAPP){ st.textContent=KAKAO_MSG;st.className='status ok';showForLongPress(); }
       else{ download(fb,'앞면');
             st.textContent='공유창을 열지 못해 앞면을 내려받았습니다';st.className='status err'; }
     }
   }else if(INAPP){
-    st.textContent=KAKAO_MSG;st.className='status err';
-    $('inapp').scrollIntoView({behavior:'smooth',block:'start'});
+    st.textContent=KAKAO_MSG;st.className='status ok';
+    showForLongPress();
   }else{
     download(fb,'앞면');
     st.textContent='앞면을 내려받았습니다';st.className='status ok';
