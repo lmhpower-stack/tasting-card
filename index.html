@@ -59,7 +59,9 @@
         <div><label for="score">내 점수</label><input id="score" value="92"></div>
         <div><label for="taster">시음자</label><input id="taster" value="명훈"></div>
         <div><label for="date">시음일</label><input id="date"></div>
-        <div><label for="theme">모임 테마</label><input id="theme" value="아일라 섬 한 바퀴"></div>
+        <div><label for="themeSel">모임 테마</label><select id="themeSel"></select></div>
+        <div class="wide" id="themeCustomBox"><label for="theme">테마 직접 입력</label><input id="theme" value="아일라 섬 한 바퀴"></div>
+        <div class="wide"><p class="status" id="themeHint" style="margin:0"></p></div>
       </div>
     </section>
 
@@ -84,8 +86,6 @@
         <div><label for="poy">세로 위치</label><input type="range" id="poy" min="-100" max="100" value="0"></div>
         <div class="wide"><button id="resetPhoto">사진 위치 초기화</button>
           <p class="status">PC에서는 카드의 사진을 마우스로 끌어 옮길 수도 있습니다</p></div>
-        <div class="wide"><label for="themeSel">모임 테마 — 고르면 그날 라인업만 나옵니다</label><select id="themeSel"></select>
-          <p class="status" id="themeHint"></p></div>
         <div class="wide"><label for="preset">위스키 <span id="presetCount" style="color:rgba(231,218,189,.35)"></span></label><select id="preset"></select></div>
         <div class="wide"><label for="name">이름</label><input id="name" value="라가불린 16년"></div>
         <div class="wide"><label for="latin">영문</label><input id="latin" value="LAGAVULIN 16"></div>
@@ -102,31 +102,20 @@
         <div><label for="frame">색</label>
           <select id="frame"><option>구리</option><option selected>은</option><option>금</option><option>홀로그램</option></select></div>
         <div><label for="season">시즌 (뒷면)</label><input id="season" value="2026 SEASON 01"></div>
-        <div class="wide"><label class="check"><input type="checkbox" id="showSerial"> 등급 · 일련번호 표시</label></div>
-        <div><label for="serial">번호</label><input id="serial" value="007" disabled></div>
-        <div><label for="total">전체</label><input id="total" value="071" disabled></div>
       </div>
     </section>
 
-    <section>
-      <p class="legend">멤버용 링크</p>
-      <p class="status" style="margin:0 0 10px">시트 주소와 이름이 미리 채워진 개인 링크를 만듭니다. 카톡방에 뿌리거나 각자 즐겨찾기 해두면 됩니다.</p>
-      <div class="grid">
-        <div class="wide"><label for="shareLink">내 링크</label><input id="shareLink" readonly placeholder="아래 버튼을 누르세요"></div>
+    <section id="cfgSection">
+      <p class="legend" id="cfgLegend">시트 연결</p>
+      <div id="cfgFields">
+        <div class="grid">
+          <div class="wide"><label for="api">Apps Script 웹앱 주소</label><input id="api" placeholder="https://script.google.com/macros/s/…/exec"></div>
+        </div>
+        <div class="btns"><button class="primary" id="load">불러오기</button></div>
       </div>
-      <div class="btns"><button id="makeLink">링크 만들기</button><button id="copyLink">복사</button></div>
-      <p class="status" id="linkStatus"></p>
-    </section>
-
-    <section>
-      <p class="legend">시트 연결</p>
-      <div class="grid">
-        <div class="wide"><label for="api">Apps Script 웹앱 주소</label><input id="api" placeholder="https://script.google.com/macros/s/…/exec"></div>
-        <div class="wide"><label for="paste">또는 맛 속성 목록 붙여넣기 (한 줄에 하나)</label><textarea id="paste"></textarea></div>
+      <div class="btns" id="cfgCompact" style="display:none">
+        <button id="reload">시트 다시 불러오기</button>
       </div>
-      <div class="btns"><button class="primary" id="load">불러오기</button>
-        <button id="testApi">브라우저에서 주소 열어보기</button>
-        <button id="usePaste">붙여넣기 적용</button></div>
       <p class="status" id="status">기본 목록 사용 중</p>
     </section>
   </form>
@@ -141,9 +130,8 @@
     </div>
     <div class="btns">
       <button id="flip">뒷면 보기</button>
-      <button class="primary" id="savePng">PNG 저장</button>
+      <button class="primary" id="savePng">저장 (사진 + 기록)</button>
       <button id="saveBoth">앞·뒤 저장</button>
-      <button id="saveSheet">시트에 저장</button>
     </div>
     <p class="status" id="saveStatus"></p>
   </div>
@@ -157,19 +145,14 @@ const $=id=>document.getElementById(id);
 let photo=null, side='front';
 
 const FRAMES={
-  '구리':      {stops:['#6B3A1C','#D79A62','#9C5A2E','#F0C79C','#7A431F'],accent:'#D79A62',ink:'#F3E4D0',holo:0,tier:'데일리'},
-  '은':        {stops:['#5C6067','#D5DAE1','#8E959E','#F4F6F9','#666B73'],accent:'#C9D0D8',ink:'#F0F3F7',holo:.18,tier:'리저브'},
-  '금':        {stops:['#7A5C16','#F1D68C','#C29B3C','#FFF6CE','#8A6A1E'],accent:'#E7C66A',ink:'#FBF2D8',holo:.4,tier:'레어 캐스크'},
-  '홀로그램':  {stops:['#7E4FA6','#6FD6E8','#F2E27A','#EE7FB5','#7E4FA6'],accent:'#E9D7F2',ink:'#FBF4FF',holo:1,tier:'그랜드 빈티지'}
+  '구리':      {stops:['#6B3A1C','#D79A62','#9C5A2E','#F0C79C','#7A431F'],accent:'#D79A62',ink:'#F3E4D0',holo:0},
+  '은':        {stops:['#5C6067','#D5DAE1','#8E959E','#F4F6F9','#666B73'],accent:'#C9D0D8',ink:'#F0F3F7',holo:.18},
+  '금':        {stops:['#7A5C16','#F1D68C','#C29B3C','#FFF6CE','#8A6A1E'],accent:'#E7C66A',ink:'#FBF2D8',holo:.4},
+  '홀로그램':  {stops:['#7E4FA6','#6FD6E8','#F2E27A','#EE7FB5','#7E4FA6'],accent:'#E9D7F2',ink:'#FBF4FF',holo:1}
 };
 
 (function(){const t=new Date(),p=n=>String(n).padStart(2,'0');
   $('date').value=`${t.getFullYear()}.${p(t.getMonth()+1)}.${p(t.getDate())}`;})();
-
-$('showSerial').addEventListener('change',()=>{
-  const on=$('showSerial').checked;
-  $('serial').disabled=!on;$('total').disabled=!on;draw();
-});
 
 const FALLBACK=['피트','스모크','요오드','타르','셰리','오크','바닐라','캐러멜','과일','시트러스','건포도','꿀','단맛',
   '스파이스','후추','허브','꽃','견과','초콜릿','커피','가죽','약재','흙','바다','몰트','바디'];
@@ -220,7 +203,7 @@ $('addAxis').addEventListener('click',()=>{
 
 function setStatus(m,c){const s=$('status');s.textContent=m;s.className='status '+(c||'');}
 function applyOptions(l){AXIS_OPTIONS=[...new Set(l.map(x=>String(x).trim()).filter(Boolean))];if(!AXIS_OPTIONS.length)AXIS_OPTIONS=[...FALLBACK];renderOptions();}
-$('load').addEventListener('click',async()=>{
+async function loadSheet(){
   const url=$('api').value.trim();if(!url){setStatus('웹앱 주소를 넣어주세요','err');return;}
   if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(url)){
     setStatus('주소 형식이 다릅니다 — /exec 로 끝나야 합니다 (/dev 아님)','err');return;
@@ -250,17 +233,12 @@ $('load').addEventListener('click',async()=>{
   if(j.whiskies&&j.whiskies.length) SHEET_WHISKIES=j.whiskies;
   if(j.themes&&j.themes.length) SHEET_THEMES=j.themes;
   fillTheme();fillPreset();
-  setStatus(`불러옴 — 속성 ${AXIS_OPTIONS.length}개`
+  setStatus(`시트 연결됨 — 속성 ${AXIS_OPTIONS.length}개`
     +(SHEET_WHISKIES?` · 위스키 ${SHEET_WHISKIES.length}개`:'')
     +(SHEET_THEMES?` · 테마 ${SHEET_THEMES.length}개`:''),'ok');
-});
-$('testApi').addEventListener('click',()=>{
-  const url=$('api').value.trim();
-  if(!url){setStatus('웹앱 주소를 먼저 넣어주세요','err');return;}
-  window.open(url+'?action=cardmeta','_blank');
-  setStatus('새 탭에서 JSON이 보이면 시트 쪽은 정상입니다. 그런데도 불러오기가 실패하면 이 페이지의 네트워크가 막힌 것입니다','');
-});
-$('usePaste').addEventListener('click',()=>{applyOptions($('paste').value.split(/\r?\n/));setStatus(`속성 ${AXIS_OPTIONS.length}개 적용`,'ok');});
+}
+$('load').addEventListener('click',loadSheet);
+$('reload').addEventListener('click',loadSheet);
 
 const FALLBACK_THEMES=[
  {name:'아일라 섬 한 바퀴',date:$('date').value,whiskies:['라가불린 16년','라프로익 PX','옥토모어 14.2']},
@@ -277,7 +255,7 @@ function themeList(){
 
 function fillTheme(){
   const ts=themeList(), today=$('date').value;
-  $('themeSel').innerHTML='<option value="">전체 위스키</option>'+
+  $('themeSel').innerHTML='<option value="">직접 입력 · 전체 위스키</option>'+
     ts.map(t=>`<option value="${t.name}">${t.date} · ${t.name}</option>`).join('');
   const todays=ts.find(t=>String(t.date).trim()===today);
   if(todays){
@@ -285,8 +263,16 @@ function fillTheme(){
     $('theme').value=todays.name;
   }
   $('themeHint').textContent=ts.length
-    ? `예정일이 잡힌 테마 ${ts.length}개`
+    ? `예정일이 잡힌 테마 ${ts.length}개 — 고르면 그날 라인업만 목록에 나옵니다`
     : '시트 테마 탭에 예정일을 넣으면 여기에 나옵니다';
+  syncThemeBox();
+}
+
+/* 테마를 골랐으면 직접 입력 칸은 감춘다 */
+function syncThemeBox(){
+  const picked=$('themeSel').value;
+  $('themeCustomBox').style.display=picked?'none':'';
+  if(picked) $('theme').value=picked;
 }
 
 function whiskyPool(){
@@ -321,11 +307,10 @@ function loadWhisky(){
 
 $('themeSel').addEventListener('change',()=>{
   const t=themeList().find(x=>x.name===$('themeSel').value);
-  if(t){
-    $('theme').value=t.name;
-    if(t.date) $('date').value=t.date;
-  }
+  if(t&&t.date) $('date').value=t.date;
+  syncThemeBox();
   fillPreset();
+  draw();
 });
 $('preset').addEventListener('change',loadWhisky);
 /* 사진 — blob: 주소는 샌드박스 iframe에서 막히는 경우가 있어 data URL 로 읽는다 */
@@ -363,8 +348,7 @@ document.addEventListener('input',e=>{if(e.target.type!=='file'&&!e.target.close
 
 function data(){
   const F=FRAMES[$('frame').value]||FRAMES['은'];
-  return {F,tier:F.tier,showSerial:$('showSerial').checked,
-    serial:$('serial').value,total:$('total').value,season:$('season').value,
+  return {F,season:$('season').value,
     verdict:$('verdict').value,nose:$('nose').value,palate:$('palate').value,finish:$('finish').value,
     score:$('score').value,taster:$('taster').value,date:$('date').value,theme:$('theme').value,
     name:$('name').value,latin:$('latin').value,region:$('region').value,
@@ -514,16 +498,8 @@ function drawFront(d){
   const M=78,R=W-M;
 
   /* 머리 */
-  if(d.showSerial){
-    const rw=Math.max(210,[...d.tier].length*30+110);
-    ctx.fillStyle=metal(M,96,M+rw,142,T.stops);rrect(M,96,rw,46,23);ctx.fill();
-    ctx.strokeStyle='rgba(0,0,0,.4)';ctx.lineWidth=1.5;rrect(M,96,rw,46,23);ctx.stroke();
-    text(d.tier.toUpperCase(),M+rw/2,127,{size:21,weight:700,spacing:6,color:'#1A1108',align:'center'});
-    text(`No.${d.serial} / ${d.total}`,R,128,{size:22,weight:700,spacing:3,color:ACC,align:'right'});
-  }else{
-    text('부천 위스키 클럽',M,128,{size:19,weight:600,spacing:8,color:ACC});
-    text(d.date,R,128,{size:20,weight:600,spacing:3,color:MUT,align:'right'});
-  }
+  text('부천 위스키 클럽',M,128,{size:19,weight:600,spacing:8,color:ACC});
+  text(d.date,R,128,{size:20,weight:600,spacing:3,color:MUT,align:'right'});
 
   /* 사진 */
   const px=M,py=164,pw=R-M,ph=474;
@@ -645,11 +621,9 @@ function drawBack(d){
   const M=78,R=W-M;
   ctx.fillStyle=metal(M,1180,R,1182,T.stops);ctx.fillRect(M,1180,R-M,2);
   text(d.season,cx,1234,{size:20,weight:700,spacing:8,color:ACC,align:'center'});
-  if(d.showSerial)
-    text(`${d.tier}  ·  No.${d.serial} / ${d.total}`,cx,1282,{size:21,weight:600,spacing:3,color:'rgba(255,248,235,.66)',align:'center'});
   const nm=fit(d.name,R-M,26,18,600,SERIF);
-  text(nm.line,cx,d.showSerial?1330:1300,{size:nm.size,weight:600,family:SERIF,color:'rgba(255,248,235,.6)',align:'center'});
-  text(`${d.taster}  ·  ${d.date}`,cx,d.showSerial?1384:1354,{size:24,family:SERIF,color:'rgba(255,248,235,.8)',align:'center'});
+  text(nm.line,cx,1300,{size:nm.size,weight:600,family:SERIF,color:'rgba(255,248,235,.6)',align:'center'});
+  text(`${d.taster}  ·  ${d.date}`,cx,1354,{size:24,family:SERIF,color:'rgba(255,248,235,.8)',align:'center'});
 }
 
 function draw(){
@@ -685,31 +659,34 @@ function save(label){
     a.download=`시음카드_${$('name').value.replace(/\s+/g,'')}_${$('taster').value}_${label}.png`;
     a.click();URL.revokeObjectURL(a.href);});
 }
-$('savePng').addEventListener('click',()=>save(side==='front'?'앞면':'뒷면'));
+$('savePng').addEventListener('click',()=>{
+  save(side==='front'?'앞면':'뒷면');
+  saveToSheet();
+});
 $('saveBoth').addEventListener('click',()=>{
   const cur=side;
   side='front';draw();save('앞면');
   setTimeout(()=>{side='back';draw();save('뒷면');
     setTimeout(()=>{side=cur;$('flip').textContent=side==='front'?'뒷면 보기':'앞면 보기';draw();},350);},350);
 });
-$('saveSheet').addEventListener('click',async()=>{
+async function saveToSheet(){
   const url=$('api').value.trim(),st=$('saveStatus'),d=data();
-  if(!url){st.textContent='시트 연결에 웹앱 주소를 먼저 넣어주세요';st.className='status err';return;}
-  if(!d.taster.trim()){st.textContent='시음자 이름을 넣어주세요';st.className='status err';return;}
-  st.textContent='저장 중…';st.className='status';
+  if(!url){st.textContent='사진만 저장됨 — 시트가 연결되지 않았습니다';st.className='status err';return;}
+  if(!d.taster.trim()){st.textContent='사진만 저장됨 — 시음자 이름이 비어 있어 기록은 남기지 않았습니다';st.className='status err';return;}
+  st.textContent='기록 저장 중…';st.className='status';
   try{
     const body={date:d.date,taster:d.taster,name:d.name,verdict:d.verdict,nose:d.nose,
       palate:d.palate,finish:d.finish,score:d.score,theme:d.theme,
       axes:d.labels.map((n,i)=>[n,d.vals[i]])};
     const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
     const j=await r.json();
-    if(j.ok){st.textContent=j.updated?`${j.row}행 갱신됨 — 같은 날 같은 병 기록을 덮어썼습니다`:`${j.row}행에 저장됨`;st.className='status ok';}
-    else{st.textContent='저장 실패 — '+(j.error||'알 수 없는 오류');st.className='status err';}
+    if(j.ok){st.textContent=j.updated?`사진 저장 · 기록 갱신됨 (${j.row}행 — 같은 날 같은 병)`:`사진 저장 · 기록 남김 (${j.row}행)`;st.className='status ok';}
+    else{st.textContent='사진은 저장됨 · 기록 실패 — '+(j.error||'알 수 없는 오류');st.className='status err';}
   }catch(e){
-    st.textContent='저장 실패 — 이 페이지에서 외부 호출이 막혔거나(브라우저에서 직접 열어보세요), 배포 액세스 권한이 "모든 사용자"가 아닙니다';
+    st.textContent='사진은 저장됨 · 기록 실패 — 네트워크가 막혔거나 배포 권한이 "모든 사용자"가 아닙니다';
     st.className='status err';
   }
-});
+}
 
 $('resetPhoto').addEventListener('click',()=>{
   $('pzoom').value=100;$('pox').value=0;$('poy').value=0;$('pzoomV').textContent='100%';draw();
@@ -741,37 +718,25 @@ cv.addEventListener('pointermove',e=>{
    배포할 때 여기에 웹앱 주소를 한 번 넣어두면
    멤버들은 주소를 몰라도 바로 쓸 수 있습니다.
    ───────────────────────────────────────────── */
-const CONFIG={ API:'' };
+const CONFIG={ API:'https://script.google.com/macros/s/AKfycbwe6ki74g4Rwgf-nOxNBaNzIVF7jMVW9oDNBr_PRN4zuIaKojZUnbJpyh6kJBb5KdWCyg/exec' };
 
-/* 주소창 파라미터로도 설정 — ?api=…&name=명훈&theme=아일라 */
+/* 주소창으로 시트를 지정할 수도 있다 — ?api=… */
 const Q=new URLSearchParams(location.search);
 if(Q.get('api')||CONFIG.API) $('api').value=Q.get('api')||CONFIG.API;
-if(Q.get('name')) $('taster').value=Q.get('name');
-if(Q.get('theme')) $('theme').value=Q.get('theme');
-if(Q.get('frame')&&FRAMES[Q.get('frame')]) $('frame').value=Q.get('frame');
-
-$('makeLink').addEventListener('click',()=>{
-  const p=new URLSearchParams();
-  if($('api').value.trim()) p.set('api',$('api').value.trim());
-  if($('taster').value.trim()) p.set('name',$('taster').value.trim());
-  if($('theme').value.trim()) p.set('theme',$('theme').value.trim());
-  p.set('frame',$('frame').value);
-  const link=location.origin+location.pathname+'?'+p.toString();
-  $('shareLink').value=link;
-  $('linkStatus').textContent=location.protocol==='file:'
-    ? '로컬 파일이라 링크가 이 PC에서만 열립니다 — GitHub Pages에 올린 뒤 다시 만드세요'
-    : '이 링크를 저장해두면 시트 주소와 이름이 자동으로 채워집니다';
-  $('linkStatus').className='status'+(location.protocol==='file:'?' err':' ok');
-});
-$('copyLink').addEventListener('click',async()=>{
-  if(!$('shareLink').value) return;
-  try{ await navigator.clipboard.writeText($('shareLink').value);
-    $('linkStatus').textContent='복사됨';$('linkStatus').className='status ok';
-  }catch(e){ $('shareLink').select(); }
-});
 
 renderOptions();renderAxes();fillTheme();fillPreset();
-if($('api').value.trim()) $('load').click();
+
+/* 주소가 미리 박혀 있거나 링크로 넘어오면 열자마자 자동 연결 */
+if($('api').value.trim()){
+  if(CONFIG.API && !Q.get('api')){
+    // 배포본 — 멤버에게는 주소 입력칸을 감춘다
+    $('cfgFields').style.display='none';
+    $('cfgCompact').style.display='';
+    $('cfgLegend').textContent='시트';
+  }
+  setStatus('시트에 연결하는 중…');
+  loadSheet();
+}
 document.fonts.ready.then(draw);
 draw();
 </script>
