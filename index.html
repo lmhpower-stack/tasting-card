@@ -73,7 +73,8 @@
 <div class="wrap">
   <form onsubmit="return false">
     <h1>시음카드</h1>
-    <p class="sub">병 정보는 시트에서, 느낌은 내가.<br>마우스를 카드 위에 올리면 빛이 움직입니다.</p>
+    <p class="sub">병 정보는 시트에서, 느낌은 내가.<br>마우스를 카드 위에 올리면 빛이 움직입니다.
+      <span style="color:rgba(231,218,189,.3)">· v6</span></p>
 
     <section>
       <p class="legend">내 기록</p>
@@ -105,9 +106,7 @@
       <p class="legend">병</p>
       <div class="grid">
         <div class="wide"><label for="photo">병 사진</label><input type="file" id="photo" accept="image/*">
-          <input type="file" id="photoAny" style="display:none">
-          <div class="btns" style="margin:8px 0 0"><button id="pickAny">다른 앱에서 고르기</button></div>
-          <p class="status" id="photoStatus">모바일에서 갤러리가 안 보이면 위 버튼을 눌러보세요 · 끌어다 놓기 · 붙여넣기도 됩니다</p></div>
+          <p class="status" id="photoStatus">끌어다 놓기 · 붙여넣기(Ctrl+V)도 됩니다</p></div>
         <div class="wide"><button id="clearPhoto">사진 지우기</button></div>
         <div><label for="pmode">맞춤</label>
           <select id="pmode"><option value="cover">채우기 (잘림)</option><option value="contain">전체 보이기</option></select></div>
@@ -199,6 +198,14 @@
 </div>
 
 <script>
+window.addEventListener('error',ev=>{
+  const st=document.getElementById('saveStatus');
+  if(st){st.textContent='오류: '+(ev.message||ev.error);st.className='status err';}
+});
+window.addEventListener('unhandledrejection',ev=>{
+  const st=document.getElementById('saveStatus');
+  if(st){st.textContent='오류: '+((ev.reason&&ev.reason.message)||ev.reason);st.className='status err';}
+});
 const SANS='"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif';
 const SERIF='Georgia,"Nanum Myeongjo","Apple SD Myungjo","Noto Serif KR",Batang,serif';
 const W=1080,Hc=1512;
@@ -506,11 +513,9 @@ function loadPhotoFile(f){
   fr.readAsDataURL(f);
 }
 $('photo').addEventListener('change',e=>{if(e.target.files[0])loadPhotoFile(e.target.files[0]);});
-/* accept 를 걸지 않은 입력 — 갤러리·구글포토·드라이브까지 선택지에 나온다 */
-$('photoAny').addEventListener('change',e=>{if(e.target.files[0])loadPhotoFile(e.target.files[0]);});
-$('pickAny').addEventListener('click',()=>$('photoAny').click());
+
 $('clearPhoto').addEventListener('click',()=>{
-  photo=null;$('photo').value='';$('photoAny').value='';draw();
+  photo=null;$('photo').value='';draw();
   $('photoStatus').textContent='사진 없음';$('photoStatus').className='status';
 });
 ['dragover','drop'].forEach(ev=>document.addEventListener(ev,e=>{
@@ -2331,8 +2336,9 @@ $('savePng').addEventListener('click',async e=>{
     return;
   }
 
-  const btn=e.target,cur=side,st=$('saveStatus');
+  const btn=e.currentTarget,cur=side,st=$('saveStatus');
   btn.disabled=true;
+  const unlock=setTimeout(()=>{btn.disabled=false;},12000);   // 무슨 일이 있어도 12초 뒤 해제
   try{
   st.textContent='앞면 만드는 중…';st.className='status';
   side='front';draw();const fb=await blobNow();
@@ -2349,16 +2355,20 @@ $('savePng').addEventListener('click',async e=>{
   const files=[new File([fb],fileName('앞면'),{type:'image/png'}),
                new File([bb],fileName('뒷면'),{type:'image/png'})];
 
-  let shared=false;
+  let shared=false, shareErr='';
   if(navigator.canShare&&navigator.canShare({files})){
     try{ await navigator.share({files,title:'시음카드'}); shared=true; }
-    catch(err){ if(err&&err.name==='AbortError') shared=true; }
+    catch(err){
+      if(err&&err.name==='AbortError') shared=true;      // 사용자가 닫음
+      else shareErr=(err&&err.name)||'실패';              // 권한 만료 등
+    }
   }
   // 내장 브라우저의 다운로드는 성공 여부를 알 수 없어 시도하지 않는다
   if(!shared&&!INAPP){ download(fb,'앞면'); await wait(500); download(bb,'뒷면'); }
 
   $('outBox').scrollIntoView({behavior:'smooth',block:'start'});
   st.textContent = shared ? '공유창에서 사진에 저장을 고르세요'
+    : shareErr ? '공유창을 열지 못했습니다 — 아래 이미지를 길게 눌러 저장하세요'
     : INAPP ? '카드를 만들었습니다 — 아래 이미지를 길게 눌러 저장하세요'
     : '내려받았습니다 — 안 보이면 아래 이미지를 길게 누르세요';
   st.className='status ok';
@@ -2368,6 +2378,7 @@ $('savePng').addEventListener('click',async e=>{
     st.textContent='카드를 만들지 못했습니다 — '+(err&&err.message?err.message:err);
     st.className='status err';
   }finally{
+    clearTimeout(unlock);
     btn.disabled=false;
   }
 });
