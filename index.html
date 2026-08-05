@@ -2324,6 +2324,33 @@ function download(blob,label){
   setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 }
 
+/* ── 필수 항목 검사 ── */
+const REQUIRED=[['taster','시음자'],['name','위스키 이름'],['verdict','한 줄'],
+  ['nose','향'],['palate','맛'],['finish','여운']];
+
+function checkRequired(){
+  const miss=[];
+  REQUIRED.forEach(([id,label])=>{
+    const el=$(id), empty=!el.value.trim();
+    el.classList.toggle('missing',empty);
+    if(empty) miss.push({el,label});
+  });
+  // 맛 지도 — 축 이름이 다 있어야 하고, 값이 기본값 그대로면 아직 안 매긴 것으로 본다
+  const noName=!axes.length||axes.some(a=>!a.n.trim());
+  const untouched=!axesTouched&&axes.every(a=>a.v===5);
+  const axesBad=noName||untouched;
+  $('axes').classList.toggle('missing',axesBad);
+  if(axesBad) miss.push({
+    el:$('axes'),
+    label: noName ? '맛 지도 축 이름' : '맛 지도(슬라이더를 움직여 주세요)'
+  });
+  return miss;
+}
+document.addEventListener('input',e=>{
+  if(REQUIRED.some(([id])=>id===e.target.id)&&e.target.value.trim())
+    e.target.classList.remove('missing');
+});
+
 $('savePng').addEventListener('click',async e=>{
   const miss=checkRequired();
   if(miss.length){
