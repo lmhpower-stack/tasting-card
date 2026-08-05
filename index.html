@@ -61,7 +61,7 @@
      border:1px solid rgba(211,118,92,.5);background:rgba(211,118,92,.1);border-radius:3px">
   <p style="margin:0 0 8px;font-size:13px;line-height:1.6">
     <b>카카오톡 안에서 열렸습니다.</b> 여기서는 파일 저장이 막힐 수 있습니다.<br>
-    카드는 만들어지니, <b>화면에 뜬 이미지를 길게 눌러</b> 저장하세요.
+    저장이 안 되면 아래 <b>브라우저로 열기</b>를 눌러주세요.
   </p>
   <div class="btns" style="margin:0">
     <button id="openExt">브라우저로 열기</button>
@@ -186,14 +186,7 @@
       <button class="primary" id="savePng">저장 (앞뒤 + 기록)</button>
     </div>
     <p class="status" id="saveStatus"></p>
-    <div id="outBox" style="display:none;width:100%;max-width:430px">
-      <p class="status" style="margin:4px 0 10px;font-size:13px;color:#C9A44C">
-        아래 이미지를 <b>길게 눌러 → 이미지 저장</b></p>
-      <p class="status" style="margin:0 0 6px">앞면</p>
-      <img id="outFront" style="width:100%;border-radius:6px;display:block;margin-bottom:16px">
-      <p class="status" style="margin:0 0 6px">뒷면</p>
-      <img id="outBack" style="width:100%;border-radius:6px;display:block">
-    </div>
+
   </div>
 </div>
 
@@ -2374,10 +2367,6 @@ $('savePng').addEventListener('click',async e=>{
   side='back';draw();const bb=await blobNow();
   side=cur;$('flip').textContent=side==='front'?'뒷면 보기':'앞면 보기';draw();
 
-  // 화면에 남겨둔다 — 길게 눌러 저장할 수 있게
-  $('outFront').src=URL.createObjectURL(fb);
-  $('outBack').src=URL.createObjectURL(bb);
-  $('outBox').style.display='';
 
   const files=[new File([fb],fileName('앞면'),{type:'image/png'}),
                new File([bb],fileName('뒷면'),{type:'image/png'})];
@@ -2393,11 +2382,10 @@ $('savePng').addEventListener('click',async e=>{
   // 내장 브라우저의 다운로드는 성공 여부를 알 수 없어 시도하지 않는다
   if(!shared&&!INAPP){ download(fb,'앞면'); await wait(500); download(bb,'뒷면'); }
 
-  $('outBox').scrollIntoView({behavior:'smooth',block:'start'});
   st.textContent = shared ? '공유창에서 사진에 저장을 고르세요'
-    : shareErr ? '공유창을 열지 못했습니다 — 아래 이미지를 길게 눌러 저장하세요'
-    : INAPP ? '카드를 만들었습니다 — 아래 이미지를 길게 눌러 저장하세요'
-    : '내려받았습니다 — 안 보이면 아래 이미지를 길게 누르세요';
+    : shareErr ? '공유창을 열지 못했습니다 — 크롬·사파리로 열어주세요'
+    : INAPP ? '저장이 막혔습니다 — 위의 [브라우저로 열기]를 눌러주세요'
+    : '내려받았습니다';
   st.className='status ok';
   saveToSheet();
   }catch(err){
