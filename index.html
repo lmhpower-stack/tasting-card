@@ -78,7 +78,7 @@
   <form onsubmit="return false">
     <h1>시음카드</h1>
     <p class="sub">병 정보는 시트에서, 느낌은 내가.<br>마우스를 카드 위에 올리면 빛이 움직입니다.
-      <span style="color:#C9A44C">· v19</span></p>
+      <span style="color:#C9A44C">· v21</span></p>
 
     <section>
       <p class="legend">내 기록</p>
@@ -102,8 +102,7 @@
         <div class="wide"><label for="finish">여운<span class="req">*</span></label><textarea id="finish" placeholder="삼키고 나서 남는 것"></textarea><div class="chips cats" id="cats-finish"></div><div class="chips" id="chips-finish"></div></div>
         <div><label for="score">내 점수</label><input id="score" placeholder="0~100" inputmode="numeric" maxlength="3"></div>
         <div><label for="taster">시음자<span class="req">*</span></label><input id="taster" placeholder="이름 또는 닉네임">
-          <p class="status" style="margin:5px 0 0"><span id="memHint">이 기기에 기억해 둡니다</span>
-            <button id="forgetMe" style="padding:3px 7px;font-size:10px;margin-left:6px">지우기</button></p></div>
+          <p class="status" style="margin:5px 0 0"><span id="memHint">이 기기에 기억해 둡니다</span></p></div>
         <div><label for="date">시음일</label><input id="date" inputmode="numeric" maxlength="10">
           <p class="status" id="dateHint" style="margin:4px 0 0"></p></div>
         <div><label for="themeSel">모임 테마</label><select id="themeSel"></select></div>
@@ -203,9 +202,8 @@
     <div class="btns">
       <button id="flip">뒷면 보기</button>
       <button class="primary" id="savePng">저장 · 공유</button>
-      <button id="nextCard" style="display:none">다음 병 준비</button>
+      <button id="nextCard">지우기</button>
       <button id="undoClear" style="display:none">되돌리기</button>
-      <button id="kakaoShare" style="display:none">카톡으로 보내기</button>
     </div>
     <p class="status" id="saveStatus"></p>
     <div id="kakaoOut" style="display:none;width:100%;max-width:430px;margin-top:6px">
@@ -2493,12 +2491,6 @@ function restore(){
   }
   if(m.taster) $('memHint').textContent=`${m.taster} 님으로 기억하고 있습니다`;
 }
-$('forgetMe').addEventListener('click',()=>{
-  try{ localStorage.removeItem(MEM_KEY); }catch(e){}
-  $('taster').value='';
-  $('memHint').textContent='기억한 내용을 지웠습니다';
-  $('taster').focus();
-});
 
 /* ── 입력값 다듬기 ──
    카드에 적힌 그대로 찍히므로, 숫자여야 할 것은 숫자만 남긴다. */
@@ -2556,35 +2548,27 @@ function frontJpeg(){
   return new Promise(res=>cv.toBlob(b=>{ side=cur; draw(); res(b); },'image/jpeg',0.92));
 }
 
-$('kakaoShare').addEventListener('click',async e=>{
-  const btn=e.currentTarget, st=$('saveStatus'), d=data();
-  btn.disabled=true;
-  st.textContent='카드를 카카오에 올리는 중…'; st.className='status';
-  try{
-    const K=await loadKakao();
-    const blob=await frontJpeg();
-    if(blob.size>5*1024*1024) throw new Error('이미지가 5MB를 넘습니다');
-    const up=await K.Share.uploadImage({ file:[new File([blob],'card.jpg',{type:'image/jpeg'})] });
-    const img=up.infos.original;
-    const here=location.origin+location.pathname;
-    await K.Share.sendDefault({
-      objectType:'feed',
-      content:{
-        title:`${d.name}${d.score?'  '+d.score+'점':''}`,
-        description:(d.verdict||d.nose||'부천 위스키 클럽 시음카드').slice(0,80),
-        imageUrl:img.url, imageWidth:img.width, imageHeight:img.height,
-        link:{ mobileWebUrl:here, webUrl:here }
-      },
-      itemContent:{ profileText:`${d.taster||''} · ${d.date}` },
-      buttons:[{ title:'나도 카드 만들기', link:{ mobileWebUrl:here, webUrl:here } }],
-      installTalk:true
-    });
-    st.textContent='카카오톡으로 보냈습니다'; st.className='status ok';
-  }catch(err){
-    st.textContent='카톡 공유 실패 — '+((err&&err.message)||err);
-    st.className='status err';
-  }finally{ btn.disabled=false; }
-});
+/* 카드를 카카오 서버에 올리고 말풍선으로 보낸다 */
+async function kakaoSend(d,blob){
+  const K=await loadKakao();
+  const b=blob||await frontJpeg();
+  if(b.size>5*1024*1024) throw new Error('이미지가 5MB를 넘습니다');
+  const up=await K.Share.uploadImage({ file:[new File([b],'card.jpg',{type:'image/jpeg'})] });
+  const img=up.infos.original;
+  const here=location.origin+location.pathname;
+  await K.Share.sendDefault({
+    objectType:'feed',
+    content:{
+      title:`${d.name}${d.score?'  '+d.score+'점':''}`,
+      description:(d.verdict||d.nose||'부천 위스키 클럽 시음카드').slice(0,80),
+      imageUrl:img.url, imageWidth:img.width, imageHeight:img.height,
+      link:{ mobileWebUrl:here, webUrl:here }
+    },
+    itemContent:{ profileText:`${d.taster||''} · ${d.date}` },
+    buttons:[{ title:'나도 카드 만들기', link:{ mobileWebUrl:here, webUrl:here } }],
+    installTalk:true
+  });
+}
 
 /* ── 쓰던 내용 임시 보관 ──
    새로고침·창 닫힘·실수로 비우기를 대비한다.
@@ -2657,7 +2641,6 @@ function clearForNext(){
   axesTouched=false;
   renderAxes();renderChips();draw();
   $('carryWarn').style.display='none';
-  $('nextCard').style.display='none';
   $('saveStatus').textContent='';$('saveStatus').className='status';
   $('kkFront').src='';$('kkBack').src='';$('kakaoOut').style.display='none';
   $('verdict').scrollIntoView({behavior:'smooth',block:'center'});
@@ -2724,7 +2707,7 @@ $('savePng').addEventListener('click',async e=>{
     return;
   }
 
-  const btn=e.currentTarget,cur=side,st=$('saveStatus');
+  const btn=e.currentTarget,cur=side,st=$('saveStatus'),d=data();
   btn.disabled=true;
   const unlock=setTimeout(()=>{btn.disabled=false;},12000);   // 무슨 일이 있어도 12초 뒤 해제
   try{
@@ -2756,38 +2739,48 @@ $('savePng').addEventListener('click',async e=>{
     $('kakaoOut').style.display='';
     $('kakaoOut').scrollIntoView({behavior:'smooth',block:'start'});
   }
-  const KAKAO_MSG='아래 이미지를 길게 눌러 저장하세요 — 끝나면 [닫기]';
   let imgMsg='';
-  // 윈도우·맥도 공유창을 지원하지만 PC 에서는 파일로 받는 편이 자연스럽다 — 공유는 폰에서만
-  if(MOBILE && navigator.canShare && navigator.canShare({files:lastFiles})){
-    st.textContent='공유창 여는 중…';
-    try{
-      await navigator.share({files:lastFiles,title:'시음카드'});
-      imgMsg='공유창에서 [이미지 저장]';
-      st.textContent=imgMsg; st.className='status ok';
-    }catch(err){
-      if(err&&err.name==='AbortError'){ imgMsg='공유 취소'; st.textContent='공유를 취소했습니다';st.className='status'; }
-      else if(INAPP){ imgMsg='이미지 표시함'; st.textContent=KAKAO_MSG;st.className='status ok';showForLongPress(); }
-      else{ download(fb,'앞면'); imgMsg='앞면 내려받음';
-            st.textContent='공유창을 열지 못해 앞면을 내려받았습니다';st.className='status err'; }
-    }
-  }else if(INAPP){
-    imgMsg='이미지 표시함';
-    st.textContent=KAKAO_MSG;st.className='status ok';
-    showForLongPress();
+  // 폰에서는 카카오톡 말풍선이 기본. 실패하면 공유창 → 길게 누르기 순으로 물러선다.
+  const KAKAO_MSG='아래 이미지를 길게 눌러 저장하세요 — 끝나면 [닫기]';
+  const webShare=async()=>{
+    if(!(navigator.canShare&&navigator.canShare({files:lastFiles}))) return false;
+    await navigator.share({files:lastFiles,title:'시음카드'});
+    return true;
+  };
+
+  if(!MOBILE){                                   // PC — 파일로 받는다
+    download(fb,'앞면'); await wait(700); download(bb,'뒷면');
+    imgMsg='앞뒤 내려받음';
+    st.textContent='앞면·뒷면을 내려받았습니다'; st.className='status ok';
   }else{
-    download(fb,'앞면');
-    if(!MOBILE){ await wait(700); download(bb,'뒷면'); imgMsg='앞뒤 내려받음'; }
-    else imgMsg='앞면 내려받음';
-    st.textContent=MOBILE?'앞면을 내려받았습니다':'앞면·뒷면을 내려받았습니다';
-    st.className='status ok';
+    try{
+      if(!KAKAO.KEY) throw new Error('카카오 키 없음');
+      st.textContent='카카오톡으로 보내는 중…';
+      await kakaoSend(d);
+      imgMsg='카카오톡으로 보냄';
+      st.textContent='카카오톡으로 보냈습니다 — 톡에서 이미지를 눌러 저장할 수 있습니다';
+      st.className='status ok';
+    }catch(e1){
+      try{
+        if(await webShare()){
+          imgMsg='공유창에서 [이미지 저장]';
+          st.textContent=imgMsg; st.className='status ok';
+        }else throw new Error('공유 미지원');
+      }catch(e2){
+        if(e2&&e2.name==='AbortError'){ imgMsg='공유 취소'; st.textContent='공유를 취소했습니다'; st.className='status'; }
+        else{
+          imgMsg='이미지 표시함';
+          st.textContent=KAKAO_MSG; st.className='status ok';
+          showForLongPress();
+        }
+      }
+    }
   }
 
   // ③ 기록은 마지막에 — 실패해도 파일은 이미 받았다
   await saveToSheet(imgMsg);
   remember();                       // 이름·디자인 취향을 이 기기에 남긴다
   dropDraft();                      // 저장했으니 임시 보관본은 필요 없다
-  $('nextCard').style.display='';   // 다음 병으로 넘어갈 수 있게
   }catch(err){
     side=cur;draw();
     st.textContent='카드를 만들지 못했습니다 — '+(err&&err.message?err.message:err);
@@ -3053,7 +3046,6 @@ if($('api').value.trim()){
   loadSheet();
 }
 $('customBox').style.display=$('design').value==='내 디자인'?'':'none';
-if(KAKAO.KEY) $('kakaoShare').style.display='';
 offerDraft();
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(draw);
 draw();
