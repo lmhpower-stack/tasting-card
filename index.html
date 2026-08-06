@@ -78,7 +78,7 @@
   <form onsubmit="return false">
     <h1>시음카드</h1>
     <p class="sub">병 정보는 시트에서, 느낌은 내가.<br>마우스를 카드 위에 올리면 빛이 움직입니다.
-      <span style="color:#C9A44C">· v21</span></p>
+      <span style="color:#C9A44C">· v22</span></p>
 
     <section>
       <p class="legend">내 기록</p>
@@ -2524,52 +2524,6 @@ $('date').addEventListener('blur',()=>{
   }
 });
 
-/* ── 카카오톡 말풍선 공유 ──
-   말풍선에는 인터넷에 있는 이미지만 넣을 수 있다.
-   그래서 카카오 서버에 먼저 올리고, 받은 주소로 메시지를 만든다. */
-let kakaoReady=null;
-function loadKakao(){
-  if(kakaoReady) return kakaoReady;
-  kakaoReady=new Promise((res,rej)=>{
-    if(window.Kakao) return res(window.Kakao);
-    const sc=document.createElement('script');
-    sc.src=KAKAO.SDK; sc.crossOrigin='anonymous';
-    sc.onload=()=>res(window.Kakao);
-    sc.onerror=()=>rej(new Error('SDK 불러오기 실패'));
-    document.head.appendChild(sc);
-  }).then(K=>{ if(!K.isInitialized()) K.init(KAKAO.KEY); return K; });
-  return kakaoReady;
-}
-
-/* 5MB 제한이 있어 PNG 대신 JPEG 으로 줄여 보낸다 */
-function frontJpeg(){
-  const cur=side;
-  side='front'; draw();
-  return new Promise(res=>cv.toBlob(b=>{ side=cur; draw(); res(b); },'image/jpeg',0.92));
-}
-
-/* 카드를 카카오 서버에 올리고 말풍선으로 보낸다 */
-async function kakaoSend(d,blob){
-  const K=await loadKakao();
-  const b=blob||await frontJpeg();
-  if(b.size>5*1024*1024) throw new Error('이미지가 5MB를 넘습니다');
-  const up=await K.Share.uploadImage({ file:[new File([b],'card.jpg',{type:'image/jpeg'})] });
-  const img=up.infos.original;
-  const here=location.origin+location.pathname;
-  await K.Share.sendDefault({
-    objectType:'feed',
-    content:{
-      title:`${d.name}${d.score?'  '+d.score+'점':''}`,
-      description:(d.verdict||d.nose||'부천 위스키 클럽 시음카드').slice(0,80),
-      imageUrl:img.url, imageWidth:img.width, imageHeight:img.height,
-      link:{ mobileWebUrl:here, webUrl:here }
-    },
-    itemContent:{ profileText:`${d.taster||''} · ${d.date}` },
-    buttons:[{ title:'나도 카드 만들기', link:{ mobileWebUrl:here, webUrl:here } }],
-    installTalk:true
-  });
-}
-
 /* ── 쓰던 내용 임시 보관 ──
    새로고침·창 닫힘·실수로 비우기를 대비한다.
    사진은 너무 커서 담지 못하므로 다시 올려야 한다. */
@@ -2740,41 +2694,29 @@ $('savePng').addEventListener('click',async e=>{
     $('kakaoOut').scrollIntoView({behavior:'smooth',block:'start'});
   }
   let imgMsg='';
-  // 폰에서는 카카오톡 말풍선이 기본. 실패하면 공유창 → 길게 누르기 순으로 물러선다.
+  // 폰에서는 OS 공유창이 진짜 사진 파일을 넘긴다.
+  // 거기서 [이미지 저장]을 고르면 갤러리로, 카카오톡을 고르면 톡으로 사진이 간다.
   const KAKAO_MSG='아래 이미지를 길게 눌러 저장하세요 — 끝나면 [닫기]';
-  const webShare=async()=>{
-    if(!(navigator.canShare&&navigator.canShare({files:lastFiles}))) return false;
-    await navigator.share({files:lastFiles,title:'시음카드'});
-    return true;
-  };
 
   if(!MOBILE){                                   // PC — 파일로 받는다
     download(fb,'앞면'); await wait(700); download(bb,'뒷면');
     imgMsg='앞뒤 내려받음';
     st.textContent='앞면·뒷면을 내려받았습니다'; st.className='status ok';
-  }else{
+  }else if(navigator.canShare&&navigator.canShare({files:lastFiles})){
+    st.textContent='공유창 여는 중…';
     try{
-      if(!KAKAO.KEY) throw new Error('카카오 키 없음');
-      st.textContent='카카오톡으로 보내는 중…';
-      await kakaoSend(d);
-      imgMsg='카카오톡으로 보냄';
-      st.textContent='카카오톡으로 보냈습니다 — 톡에서 이미지를 눌러 저장할 수 있습니다';
+      await navigator.share({files:lastFiles,title:'시음카드'});
+      imgMsg='공유창에서 [이미지 저장]';
+      st.textContent='공유창에서 [이미지 저장]을 고르면 갤러리에 들어갑니다';
       st.className='status ok';
-    }catch(e1){
-      try{
-        if(await webShare()){
-          imgMsg='공유창에서 [이미지 저장]';
-          st.textContent=imgMsg; st.className='status ok';
-        }else throw new Error('공유 미지원');
-      }catch(e2){
-        if(e2&&e2.name==='AbortError'){ imgMsg='공유 취소'; st.textContent='공유를 취소했습니다'; st.className='status'; }
-        else{
-          imgMsg='이미지 표시함';
-          st.textContent=KAKAO_MSG; st.className='status ok';
-          showForLongPress();
-        }
-      }
+    }catch(err){
+      if(err&&err.name==='AbortError'){ imgMsg='공유 취소'; st.textContent='공유를 취소했습니다'; st.className='status'; }
+      else{ imgMsg='이미지 표시함'; st.textContent=KAKAO_MSG; st.className='status ok'; showForLongPress(); }
     }
+  }else{
+    imgMsg='이미지 표시함';
+    st.textContent=KAKAO_MSG; st.className='status ok';
+    showForLongPress();
   }
 
   // ③ 기록은 마지막에 — 실패해도 파일은 이미 받았다
@@ -3013,17 +2955,6 @@ cv.addEventListener('pointermove',e=>{
    배포할 때 여기에 웹앱 주소를 한 번 넣어두면
    멤버들은 주소를 몰라도 바로 쓸 수 있습니다.
    ───────────────────────────────────────────── */
-/* 카카오톡 말풍선 공유 — 쓰려면 KEY 를 채운다.
-   1) developers.kakao.com 에서 앱 만들기 → JavaScript 키 복사
-   2) [앱] > [플랫폼 키] > [JavaScript 키] > [JavaScript SDK 도메인] 에
-      https://lmhpower-stack.github.io 등록
-   3) [도구] > [카카오톡 공유] 는 별도 설정 없이 기본 템플릿으로 동작
-   KEY 가 비어 있으면 버튼 자체가 나타나지 않는다. */
-const KAKAO={
-  KEY:'25b697bb4a3ff6610b5acdfaaf025dbe',                     // JavaScript 키
-  SDK:'https://t1.kakaocdn.net/kakao_js_sdk/2.7.5/kakao.min.js'
-};
-
 const CONFIG={ API:'https://script.google.com/macros/s/AKfycbwe6ki74g4Rwgf-nOxNBaNzIVF7jMVW9oDNBr_PRN4zuIaKojZUnbJpyh6kJBb5KdWCyg/exec' };
 
 /* 주소창으로 시트를 지정할 수도 있다 — ?api=… */
