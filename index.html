@@ -63,9 +63,9 @@
 <div id="inapp" style="display:none;max-width:1160px;margin:0 auto 18px;padding:14px 16px;
      border:1px solid rgba(211,118,92,.5);background:rgba(211,118,92,.1);border-radius:3px">
   <p style="margin:0 0 8px;font-size:13px;line-height:1.6">
-    <b>카카오톡 안에서 열렸습니다.</b> 저장을 누르면 카드가 화면에 나오니
-    <b>길게 눌러 저장</b>하시면 됩니다.<br>
-    더 편하게 쓰시려면 아래 <b>브라우저로 열기</b>를 한 번 눌러주세요.
+    <b>앱 안에서 열렸습니다.</b> 여기서는 이미지 저장이 막혀 있어
+    기본 브라우저로 넘어갑니다.<br>
+    자동으로 넘어가지 않으면 아래 <b>브라우저로 열기</b>를 눌러주세요.
   </p>
   <div class="btns" style="margin:0">
     <button id="openExt">브라우저로 열기</button>
@@ -78,7 +78,7 @@
   <form onsubmit="return false">
     <h1>시음카드</h1>
     <p class="sub">병 정보는 시트에서, 느낌은 내가.<br>마우스를 카드 위에 올리면 빛이 움직입니다.
-      <span style="color:#C9A44C">· v23</span></p>
+      <span style="color:#C9A44C">· v24</span></p>
 
     <section>
       <p class="legend">내 기록</p>
@@ -2780,28 +2780,43 @@ $('pzoom').addEventListener('input',()=>{$('pzoomV').textContent=$('pzoom').valu
 const UA=navigator.userAgent||'';
 const INAPP=/KAKAOTALK|NAVER\(inapp|Instagram|FBAN|FBAV|Line\//i.test(UA);
 const ANDROID=/Android/i.test(UA);
+/* 내장 브라우저에서는 파일 저장·공유가 막혀 있다.
+   기본 브라우저로 넘겨 주는 것이 유일한 해법이라 열자마자 자동으로 내보낸다.
+   ?ext=1 이 붙어 있으면 이미 한 번 시도한 것이므로 다시 넘기지 않는다. */
+function externalUrl(){
+  const target=location.origin+location.pathname+'?ext=1';
+  if(/KAKAOTALK/i.test(UA))                       // 카카오톡은 전용 명령을 지원한다
+    return 'kakaotalk://web/openExternal?url='+encodeURIComponent(target);
+  if(ANDROID)                                     // 그 외 안드로이드 — 기본 브라우저로
+    return 'intent://'+target.replace(/^https?:\/\//,'')
+      +'#Intent;scheme=https;action=android.intent.action.VIEW;end';
+  return null;                                    // 아이폰의 다른 앱은 방법이 없다
+}
+
 if(INAPP){
   $('inapp').style.display='';
+  const already=/[?&]ext=1/.test(location.search);   // Q 는 아래에서 선언되므로 직접 본다
+  const url=externalUrl();
+  if(!already && url){
+    $('inappHint').textContent='기본 브라우저로 넘기는 중…';
+    setTimeout(()=>{ location.href=url; },300);
+  }else if(!url){
+    $('inappHint').textContent='우측 하단 공유 아이콘 → [Safari로 열기]를 눌러주세요';
+  }else{
+    $('inappHint').textContent='자동으로 넘어가지 않았습니다 — 아래 버튼을 눌러주세요';
+  }
+
   $('openExt').addEventListener('click',()=>{
-    const url=location.href;
-    // 카카오톡은 바깥 브라우저로 넘기는 자체 명령을 지원한다
-    if(/KAKAOTALK/i.test(UA)){
-      location.href='kakaotalk://web/openExternal?url='+encodeURIComponent(url);
-      return;
-    }
-    if(ANDROID){
-      location.href='intent://'+url.replace(/^https?:\/\//,'')
-        +'#Intent;scheme=https;package=com.android.chrome;end';
-      return;
-    }
+    const u=externalUrl();
+    if(u){ location.href=u; return; }
     $('inappHint').textContent='우측 하단 공유 아이콘 → [Safari로 열기]를 눌러주세요';
     $('inappHint').className='status err';
   });
   $('copyUrl').addEventListener('click',async()=>{
-    try{ await navigator.clipboard.writeText(location.href);
+    try{ await navigator.clipboard.writeText(location.origin+location.pathname);
       $('inappHint').textContent='주소를 복사했습니다 — 크롬·사파리에 붙여넣으세요';
       $('inappHint').className='status ok';
-    }catch(e){ $('inappHint').textContent=location.href; }
+    }catch(e){ $('inappHint').textContent=location.origin+location.pathname; }
   });
 }
 
