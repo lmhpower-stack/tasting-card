@@ -34,10 +34,13 @@
   .chips.cats button.on{background:transparent;border-color:rgba(201,164,76,.5);color:#C9A44C}
   .check{display:flex;align-items:center;gap:9px;font-size:12px;color:rgba(231,218,189,.7);letter-spacing:.04em}
   .check input{width:16px;height:16px;accent-color:#C9A44C;padding:0}
-  .axis{display:grid;grid-template-columns:1fr 84px 22px 26px;gap:8px;align-items:center;margin-bottom:7px}
-  .axis b{font-size:12px;text-align:right;color:#C9A44C;font-variant-numeric:tabular-nums}
+  .axis{display:grid;grid-template-columns:1fr 104px 46px 26px;gap:8px;align-items:center;margin-bottom:7px}
+  .axis input[type=range]{touch-action:none}
+  .axnum{text-align:center;padding:7px 2px;font-size:13px;color:#C9A44C;font-variant-numeric:tabular-nums;
+    -moz-appearance:textfield}
+  .axnum::-webkit-outer-spin-button,.axnum::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   .axis button{padding:5px 0;font-size:13px}
-  input[type=range]{accent-color:#C9A44C;padding:0}
+  input[type=range]{accent-color:#C9A44C;padding:0;border:0;background:transparent;height:26px}
   .btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0 4px}
   button{font-family:inherit;font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:8px 12px;
     border-radius:2px;cursor:pointer;border:1px solid rgba(231,218,189,.28);background:transparent;color:#E7DABD}
@@ -75,11 +78,16 @@
   <form onsubmit="return false">
     <h1>시음카드</h1>
     <p class="sub">병 정보는 시트에서, 느낌은 내가.<br>마우스를 카드 위에 올리면 빛이 움직입니다.
-      <span style="color:rgba(231,218,189,.3)">· v6</span></p>
+      <span style="color:#C9A44C">· v13</span></p>
 
     <section>
       <p class="legend">내 기록</p>
       <p class="reqnote"><span class="req">*</span> 표시는 저장할 때 반드시 채워야 합니다</p>
+      <div id="carryWarn" style="display:none;margin:0 0 12px;padding:10px 12px;
+           border:1px solid rgba(211,118,92,.5);background:rgba(211,118,92,.1);border-radius:3px">
+        <span style="font-size:12px">앞 병의 기록이 그대로 남아 있습니다</span>
+        <button id="carryClear" style="margin-left:8px">지우기</button>
+      </div>
       <div class="grid">
         <div class="wide hero"><label for="verdict">한 줄 — 카드에서 가장 큰 글자<span class="req">*</span></label>
           <textarea id="verdict" placeholder="오늘 이 잔을 한 문장으로 남긴다면"></textarea></div>
@@ -87,7 +95,9 @@
         <div class="wide"><label for="palate">맛<span class="req">*</span></label><textarea id="palate" placeholder="입에 머금었을 때"></textarea><div class="chips cats" id="cats-palate"></div><div class="chips" id="chips-palate"></div></div>
         <div class="wide"><label for="finish">여운<span class="req">*</span></label><textarea id="finish" placeholder="삼키고 나서 남는 것"></textarea><div class="chips cats" id="cats-finish"></div><div class="chips" id="chips-finish"></div></div>
         <div><label for="score">내 점수</label><input id="score" placeholder="0~100"></div>
-        <div><label for="taster">시음자<span class="req">*</span></label><input id="taster" placeholder="이름 또는 닉네임"></div>
+        <div><label for="taster">시음자<span class="req">*</span></label><input id="taster" placeholder="이름 또는 닉네임">
+          <p class="status" style="margin:5px 0 0"><span id="memHint">이 기기에 기억해 둡니다</span>
+            <button id="forgetMe" style="padding:3px 7px;font-size:10px;margin-left:6px">지우기</button></p></div>
         <div><label for="date">시음일</label><input id="date"></div>
         <div><label for="themeSel">모임 테마</label><select id="themeSel"></select></div>
         <div class="wide" id="themeCustomBox"><label for="theme">테마 직접 입력</label><input id="theme" value="아일라 섬 한 바퀴"></div>
@@ -133,11 +143,12 @@
       <div class="grid">
         <div class="wide"><label for="design">테마</label>
           <select id="design">
-            <option selected>컬렉터</option><option>내 디자인</option><option>성좌판</option><option>호박빛</option><option>먹과 금</option>
+            <option selected>컬렉터</option><option>성좌판</option><option>호박빛</option><option>먹과 금</option>
             <option>리소 포스터</option><option>각인판</option><option>시음지</option><option>오크 스텐실</option>
             <option>밝은 미니멀</option><option>빈티지 라벨</option>
           </select></div>
-        <div class="wide" id="customBox" style="display:none">
+        <!-- 보류: 내 디자인(배경 이미지) — 배치 표식 방식이 정해지면 되살린다 -->
+        <div class="wide" id="customBox" style="display:none" hidden>
           <label for="bgFile">배경 이미지 — 1080 × 1512 권장</label>
           <input type="file" id="bgFile" accept="image/*">
           <label for="ovFile" style="margin-top:10px">위에 덧씌울 프레임 (투명 PNG · 선택)</label>
@@ -185,12 +196,16 @@
     <div class="btns">
       <button id="flip">뒷면 보기</button>
       <button class="primary" id="savePng">저장 · 공유</button>
+      <button id="nextCard" style="display:none">다음 병 준비</button>
     </div>
     <p class="status" id="saveStatus"></p>
     <div id="kakaoOut" style="display:none;width:100%;max-width:430px;margin-top:6px">
-      <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#C9A44C">
-        카카오톡 안에서는 이 방법으로 저장합니다<br>
-        <b>이미지를 길게 누르기 → 이미지 저장</b></p>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+        <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#C9A44C">
+          카카오톡 안에서는 이 방법으로 저장합니다<br>
+          <b>이미지를 길게 누르기 → 이미지 저장</b></p>
+        <button id="closeKakao" style="flex:none">닫기</button>
+      </div>
       <p class="status" style="margin:0 0 6px">앞면</p>
       <img id="kkFront" style="width:100%;border-radius:6px;display:block;margin-bottom:14px">
       <p class="status" style="margin:0 0 6px">뒷면</p>
@@ -254,7 +269,9 @@ function renderAxes(){
   axes.forEach((a,i)=>{
     const r=document.createElement('div');r.className='axis';
     r.innerHTML=`<input list="axisOptions" value="${a.n}" data-ax="${i}">
-      <input type="range" min="0" max="10" value="${a.v}" data-axv="${i}"><b>${a.v}</b>
+      <input type="range" min="0" max="10" step="1" value="${a.v}" data-axv="${i}">
+      <input type="number" class="axnum" min="0" max="10" step="1" value="${a.v}" data-axn="${i}"
+             inputmode="numeric" aria-label="점수">
       <button type="button" data-axdel="${i}">×</button>`;
     b.append(r);
   });
@@ -262,12 +279,20 @@ function renderAxes(){
 }
 let axesTouched=false;
 $('axes').addEventListener('input',e=>{
-  const t=e.target;
+  const t=e.target, row=t.closest('.axis');   // 슬라이더는 span 안에 있으므로 부모가 아니라 행을 찾는다
   if(t.dataset.ax!==undefined)axes[+t.dataset.ax].n=t.value;
-  if(t.dataset.axv!==undefined){axes[+t.dataset.axv].v=+t.value;t.nextElementSibling.textContent=t.value;axesTouched=true;}
+  if(t.dataset.axv!==undefined){                       // 슬라이더 → 숫자칸
+    axes[+t.dataset.axv].v=+t.value; axesTouched=true;
+    const n=row&&row.querySelector('.axnum'); if(n) n.value=t.value;
+  }
+  if(t.dataset.axn!==undefined){                       // 숫자칸 → 슬라이더
+    const v=Math.max(0,Math.min(10,Math.round(+t.value||0)));
+    axes[+t.dataset.axn].v=v; axesTouched=true;
+    const r2=row&&row.querySelector('input[type=range]'); if(r2) r2.value=v;
+  }
   if(axesTouched&&axes.every(a=>a.n.trim())) $('axes').classList.remove('missing');
   if(t.dataset.ax!==undefined) renderChips();
-  draw();
+  scheduleDraw(0);
 });
 $('axes').addEventListener('click',e=>{
   const i=e.target.dataset.axdel;if(i===undefined||axes.length<=3)return;
@@ -444,6 +469,7 @@ function whiskyPool(){
 }
 
 function fillPreset(){
+  const keep=$('preset').value;                  // 지금 고른 병을 기억해 둔다
   const sel=$('themeSel')?$('themeSel').value:'';
   const t=themeList().find(x=>x.name===sel);
   const pool=whiskyPool();
@@ -454,6 +480,16 @@ function fillPreset(){
   }
   $('preset').innerHTML=list.map(k=>`<option>${k}</option>`).join('');
   if($('presetCount')) $('presetCount').textContent=`(${list.length})`;
+
+  // 고르던 병이 새 목록에도 있으면 그대로 둔다.
+  // 병이 안 바뀌었는데 정보와 맛 지도를 초기화하면 쓰던 내용이 날아간다.
+  if(keep && list.includes(keep)){
+    $('preset').value=keep;
+    draw();
+    return;
+  }
+  // 병이 실제로 바뀌는 경우 — 앞 병 기록이 남아 있으면 알려준다
+  if(keep && noteFilled()) $('carryWarn').style.display='';
   loadWhisky();
 }
 
@@ -478,6 +514,7 @@ function loadWhisky(){
 $('design').addEventListener('change',()=>{
   $('frameBox').style.display=$('design').value==='컬렉터'?'':'none';
   $('customBox').style.display=$('design').value==='내 디자인'?'':'none';
+  remember();
   draw();
   if(photo) autoFitPhoto(true);   // 창 모양이 달라지니 다시 맞춘다
 });
@@ -489,7 +526,12 @@ $('themeSel').addEventListener('change',()=>{
   fillPreset();
   draw();
 });
-$('preset').addEventListener('change',loadWhisky);
+$('preset').addEventListener('change',()=>{
+  const carried = noteFilled();
+  loadWhisky();
+  $('carryWarn').style.display = carried ? '' : 'none';
+  if(carried) $('carryWarn').scrollIntoView({behavior:'smooth',block:'center'});
+});
 /* 사진 — blob: 주소는 샌드박스 iframe에서 막히는 경우가 있어 data URL 로 읽는다 */
 function loadPhotoFile(f){
   const st=$('photoStatus');
@@ -531,7 +573,10 @@ document.addEventListener('paste',e=>{
   const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith('image/'));
   if(it)loadPhotoFile(it.getAsFile());
 });
-document.addEventListener('input',e=>{if(e.target.type!=='file'&&!e.target.closest('#axes'))draw();});
+document.addEventListener('input',e=>{
+  if(e.target.type==='file'||e.target.closest('#axes')) return;
+  scheduleDraw(e.target.tagName==='SELECT'?0:130);   // 글자는 130ms 모아서, 선택은 즉시
+});
 
 /* 시즌은 시음일에서 뽑는다 — 분기 기준 */
 function seasonOf(dateStr){
@@ -591,13 +636,24 @@ function metal(x0,y0,x1,y1,stops){
   stops.forEach((c,i)=>g.addColorStop(i/(stops.length-1),c));return g;
 }
 let seed=7;const rnd=()=>(seed=(seed*1103515245+12345)%2147483648)/2147483648;
+/* 종이 결은 값이 같으면 늘 같은 그림이다.
+   매번 8천 번씩 찍지 말고 한 번 만들어 두었다가 통째로 얹는다. */
+let grainCv=null;
 function grain(a){
-  seed=20260804;
-  for(let i=0;i<W*Hc/190;i++){
-    const v=rnd()*a;
-    ctx.fillStyle=rnd()>.5?`rgba(0,0,0,${v})`:`rgba(255,246,230,${v*1.5})`;
-    ctx.fillRect(rnd()*W,rnd()*Hc,1,1);
+  if(!a) return;
+  if(!grainCv || grainCv._a!==a){
+    grainCv=document.createElement('canvas');
+    grainCv.width=W;grainCv.height=Hc;grainCv._a=a;
+    const g=grainCv.getContext('2d');
+    let st=20260804;
+    const r=()=>(st=(st*1103515245+12345)%2147483648)/2147483648;
+    for(let i=0;i<W*Hc/190;i++){
+      const v=r()*a;
+      g.fillStyle=r()>.5?`rgba(0,0,0,${v})`:`rgba(255,246,230,${v*1.5})`;
+      g.fillRect(r()*W,r()*Hc,1,1);
+    }
   }
+  ctx.drawImage(grainCv,0,0);
 }
 function sparkle(x,y,w,h,color,n,amp){
   for(let i=0;i<n;i++){
@@ -686,6 +742,10 @@ function radar(cx,cy,r,vals,labels,o){
    같은 내용을 네 벌의 옷으로 갈아입힌다.
    ───────────────────────────────────────────── */
 const DESIGNS={
+  // 보류 — 목록에서 뺐다. 되살리려면 위 select 에 option 을 다시 넣으면 된다.
+  // '내 디자인' — 목록에서 내려둔 상태. 배경은 되지만 요소 배치를 지정할 수단이 없어
+  // 색 표식 이미지로 배치를 읽는 방식을 검토 중이다. 아래 정의와 관련 코드는 그대로 살려 둔다.
+  '내 디자인':{ custom:true, grain:0 },
   '호박빛':{
     amberGlass:true, grain:.045,
     ink:'#FFF3DF', gold:'#F5C878', deep:'#2A1408',
@@ -901,8 +961,11 @@ function bracket(x,y,sx,sy,sz,color,alpha){
 /* 아주 작은 글씨를 테두리에 반복 — 지폐의 마이크로프린트 */
 function microtext(x1,x2,y,str,color,alpha){
   ctx.save();ctx.globalAlpha=alpha;
-  let t='';while(ctx.measureText(t).width<x2-x1) t+=str+' · ';
-  text(t,x1,y,{size:7,weight:600,spacing:1.5,color});
+  font(7,600);                                   // 재기 전에 글꼴을 맞춘다
+  const unit=str+' · ';
+  const uw=Math.max(1,ctx.measureText(unit).width);   // 폭이 0이면 무한 반복이 된다
+  const n=Math.min(400,Math.ceil((x2-x1)/uw)+1);      // 반복 상한
+  text(unit.repeat(n),x1,y,{size:7,weight:600,spacing:1.5,color});
   ctx.restore();
 }
 
@@ -1094,12 +1157,11 @@ function drawFrontEngraved(d,P){
     labelR:LR,labelSize:LS,glow:true});
 
   /* 노트 */
-  let nx=mcx+LR+labelW+26,ny=y+22;
-  [['향',d.nose],['맛',d.palate],['여운',d.finish]].forEach(([k,v])=>{
-    if(!v)return;
-    text(k,nx,ny,{size:13,weight:700,spacing:5,color:GOLD});
-    ny=para(v,nx,ny+24,R-nx,{size:19,color:P.note,lh:28})+16;
-  });
+  const nx=mcx+LR+labelW+26,ny=y+22;
+  notesBlock([['향',d.nose],['맛',d.palate],['여운',d.finish]],
+    nx,ny,R-nx,Hc-146,
+    {size:19,lh:28,weight:400,color:P.note,
+     labelSize:13,labelSpacing:5,labelColor:GOLD,labelGap:24,gap:16});
 
   /* 서명 */
   const fy=Hc-92;
@@ -1159,6 +1221,39 @@ function drawBackEngraved(d,P){
   engrave(d.taster.trim()?`${d.taster}  ·  ${d.date}`:d.date,cx,1356,
     {size:24,family:SERIF,color:INK,align:'center'});
   grainAmt=P.grain;
+}
+
+
+/* 노트 세 덩이 — 꼬리말을 넘지 않도록 글씨를 줄이고, 그래도 넘치면 잘라낸다 */
+function notesBlock(items,nx,ny,maxW,maxY,o){
+  const min=Math.max(13,o.size-6), ratio=o.lh/o.size;
+  const measure=sz=>{
+    const L=Math.round(sz*ratio); let total=0; const out=[];
+    for(const [k,v] of items){
+      if(!v) continue;
+      const ls=wrap(v,maxW,sz,o.weight);
+      out.push([k,ls]); total+=o.labelGap+ls.length*L+o.gap;
+    }
+    return {out,total,L};
+  };
+  let size=o.size, m=measure(size);
+  while(m.total>maxY-ny && size>min){ size-=1; m=measure(size); }
+
+  let y=ny, cut=false;
+  for(const [k,ls] of m.out){
+    if(y+o.labelGap+m.L>maxY){ cut=true; break; }
+    text(k,nx,y,{size:o.labelSize,weight:700,spacing:o.labelSpacing,color:o.labelColor});
+    y+=o.labelGap;
+    for(let i=0;i<ls.length;i++){
+      if(y+m.L>maxY){ cut=true; break; }
+      const last = cut || (i===ls.length-1);
+      text(ls[i]+(!last&&y+m.L*2>maxY?' …':''),nx,y,{size,weight:o.weight,color:o.color});
+      y+=m.L;
+    }
+    if(cut) break;
+    y+=o.gap;
+  }
+  return y;
 }
 
 /* ─────────── 공통: 망점·붓·굴절 ─────────── */
@@ -1325,12 +1420,11 @@ function drawFrontAmber(d,P){
   radar(mcx,mcy,RR-14,d.vals,d.labels,{grid:'rgba(255,243,223,.3)',stroke:'#FFF0CE',label:MUT,
     fill1:'rgba(255,240,210,.35)',fill2:'rgba(255,240,210,.05)',labelR:LR,labelSize:LS,glow:true});
 
-  let nx=mcx+LR+labelW+26,ny=y+24;
-  [['향',d.nose],['맛',d.palate],['여운',d.finish]].forEach(([k,v])=>{
-    if(!v)return;
-    text(k,nx,ny,{size:13,weight:700,spacing:5,color:GOLD});
-    ny=para(v,nx,ny+24,R-nx,{size:19,color:P.note,lh:28})+16;
-  });
+  const nx=mcx+LR+labelW+26,ny=y+24;
+  notesBlock([['향',d.nose],['맛',d.palate],['여운',d.finish]],
+    nx,ny,R-nx,Hc-146,
+    {size:19,lh:28,weight:400,color:P.note,
+     labelSize:13,labelSpacing:5,labelColor:GOLD,labelGap:24,gap:16});
 
   const fy=Hc-94;wave(fy-38);
   if(d.theme)text(d.theme,M,fy,{size:17,weight:500,spacing:2,color:MUT});
@@ -1472,12 +1566,11 @@ function drawFrontSumi(d,P){
   radar(mcx,mcy,RR-16,d.vals,d.labels,{grid:'rgba(28,26,23,.2)',stroke:INK,label:MUT,
     fill1:'rgba(169,132,54,.35)',fill2:'rgba(169,132,54,.06)',labelR:LR,labelSize:LS});
 
-  let nx=mcx+LR+labelW+28,ny=y+22;
-  [['향',d.nose],['맛',d.palate],['여운',d.finish]].forEach(([k,v])=>{
-    if(!v)return;
-    text(k,nx,ny,{size:13,weight:700,spacing:5,color:GOLD});
-    ny=para(v,nx,ny+24,R-nx,{size:19,color:P.note,lh:28})+16;
-  });
+  const nx=mcx+LR+labelW+28,ny=y+22;
+  notesBlock([['향',d.nose],['맛',d.palate],['여운',d.finish]],
+    nx,ny,R-nx,Hc-146,
+    {size:19,lh:28,weight:400,color:P.note,
+     labelSize:13,labelSpacing:5,labelColor:GOLD,labelGap:24,gap:16});
 
   const fy=Hc-96;
   ctx.strokeStyle=hexA(GOLD,.5);ctx.lineWidth=1;
@@ -1604,12 +1697,11 @@ function drawFrontRiso(d,P){
   radar(mcx,mcy,RR-10,d.vals,d.labels,{grid:'rgba(26,26,26,.25)',stroke:BLUE,label:MUT,
     fill1:hexA(P.orange,.75),fill2:hexA(P.orange,.35),labelR:LR,labelSize:LS});
 
-  let nx=mcx+LR+labelW+26,ny=y+18;
-  [['향',d.nose],['맛',d.palate],['여운',d.finish]].forEach(([k,v])=>{
-    if(!v)return;
-    text(k,nx,ny,{size:12,weight:700,spacing:4,color:ORG});
-    ny=para(v,nx,ny+22,R-nx,{size:18,weight:500,color:P.note,lh:27})+14;
-  });
+  const nx=mcx+LR+labelW+26,ny=y+18;
+  notesBlock([['향',d.nose],['맛',d.palate],['여운',d.finish]],
+    nx,ny,R-nx,Hc-146,
+    {size:18,lh:27,weight:500,color:P.note,
+     labelSize:12,labelSpacing:4,labelColor:ORG,labelGap:22,gap:14});
 
   const fy=Hc-92;
   ctx.fillStyle=INK;ctx.fillRect(M,fy-38,R-M,2.5);
@@ -1827,12 +1919,11 @@ function drawFrontStar(d,P){
   const CR=104, mcx=M+labelW+CR+30, mcy=y+CR+34;
   constellation(mcx,mcy,CR,d.vals,d.labels,P);
 
-  let nx=mcx+CR+labelW+42,ny=y+26;
-  [['향',d.nose],['맛',d.palate],['여운',d.finish]].forEach(([k,v])=>{
-    if(!v)return;
-    text(k,nx,ny,{size:13,weight:700,spacing:5,color:GOLD});
-    ny=para(v,nx,ny+24,R-nx,{size:19,color:P.note,lh:28})+16;
-  });
+  const nx=mcx+CR+labelW+42,ny=y+26;
+  notesBlock([['향',d.nose],['맛',d.palate],['여운',d.finish]],
+    nx,ny,R-nx,Hc-146,
+    {size:19,lh:28,weight:400,color:P.note,
+     labelSize:13,labelSpacing:5,labelColor:GOLD,labelGap:24,gap:16});
 
   /* 서명 */
   const fy=Hc-96;
@@ -1996,17 +2087,41 @@ function drawFrontSheet(d,P){
   y=by+34;
 
   /* 노트 */
-  [['향  NOSE',d.nose],['맛  PALATE',d.palate],['여운  FINISH',d.finish]].forEach(([k,v])=>{
-    if(!v)return;
-    const lines=wrap(v,R-M-52,19,400);
-    const h=Math.max(56,28+lines.length*30);
-    formBox(M,y,R-M,h,k,P);
-    lines.forEach((l,i)=>{
-      text(l,M+26,y+38+i*30,{size:19,color:P.note});
-      formLine(M+16,R-16,y+46+i*30,P,[2,4]);
-    });
-    y+=h+22;
-  });
+  // 노트가 길면 서명 자리를 침범한다. 쓸 수 있는 높이를 먼저 재고 글씨를 줄인다.
+  {
+    const items=[['향  NOSE',d.nose],['맛  PALATE',d.palate],['여운  FINISH',d.finish]]
+      .filter(([,v])=>v);
+    const budget=(Hc-116)-y-(d.verdict.trim()?104:0)-14;
+    const measure=sz=>{
+      const L=Math.round(sz*30/19); let total=0; const out=[];
+      for(const [k,v] of items){
+        const ls=wrap(v,R-M-52,sz,400);
+        out.push([k,ls]); total+=Math.max(56,28+ls.length*L)+22;
+      }
+      return {out,total,L};
+    };
+    let fs=19, m=measure(fs);
+    while(m.total>budget && fs>13){ fs-=1; m=measure(fs); }
+
+    let left=budget;
+    for(const [k,ls] of m.out){
+      const need=Math.max(56,28+ls.length*m.L)+22;
+      let lines=ls;
+      if(need>left){                                  // 그래도 넘치면 줄 수를 자른다
+        const canFit=Math.max(0,Math.floor((left-22-28)/m.L));
+        if(canFit<1) break;
+        lines=ls.slice(0,canFit);
+        if(lines.length<ls.length) lines[lines.length-1]+=' …';
+      }
+      const h=Math.max(56,28+lines.length*m.L);
+      formBox(M,y,R-M,h,k,P);
+      lines.forEach((l,i)=>{
+        text(l,M+26,y+38+i*m.L,{size:fs,color:P.note});
+        formLine(M+16,R-16,y+46+i*m.L,P,[2,4]);
+      });
+      y+=h+22; left-=h+22;
+    }
+  }
 
   /* 한 줄 */
   if(d.verdict.trim()){
@@ -2178,12 +2293,11 @@ function drawFront(d){
     fill1:P.dark?'rgba(255,255,255,.22)':hexA(ACC,.28), fill2:P.dark?'rgba(255,255,255,.05)':hexA(ACC,.06),
     labelR:LR, labelSize:LS, glow:P.dark});
 
-  let nx=mcx+LR+labelW+26,ny=y+26;
-  [['향',d.nose],['맛',d.palate],['여운',d.finish]].forEach(([k,v])=>{
-    if(!v)return;
-    text(k,nx,ny,{size:14,weight:700,spacing:5,color:ACC});
-    ny=para(v,nx,ny+26,R-nx,{size:20,color:P.note,lh:29})+16;
-  });
+  const nx=mcx+LR+labelW+26,ny=y+26;
+  notesBlock([['향',d.nose],['맛',d.palate],['여운',d.finish]],
+    nx,ny,R-nx,Hc-146,
+    {size:20,lh:29,weight:400,color:P.note,
+     labelSize:14,labelSpacing:5,labelColor:ACC,labelGap:26,gap:16});
 
   /* 서명 */
   const fy=Hc-96;
@@ -2193,7 +2307,7 @@ function drawFront(d){
     {size:26,family:SERIF,color:P.dark?'rgba(255,248,235,.88)':INK,align:'right'});
   text('부천 위스키 클럽',R,fy+34,{size:13,weight:600,spacing:5,color:MUT,align:'right'});
 
-  if(P.grain)grainAmt=P.grain;
+  grainAmt=P.grain||0;   // 0 도 유효한 값 — 앞 테마의 결이 남지 않도록
 }
 let grainAmt=.05;
 
@@ -2282,6 +2396,19 @@ function drawBack(d){
   grainAmt=P.grain;
 }
 
+/* 입력이 이어질 때마다 다시 그리면 폰이 밀린다.
+   요청을 모아 한 프레임에 한 번만 그린다. */
+let drawTimer=null, rafId=null;
+function scheduleDraw(delay){
+  if(delay){
+    if(drawTimer) clearTimeout(drawTimer);
+    drawTimer=setTimeout(()=>{drawTimer=null;scheduleDraw(0);},delay);
+    return;
+  }
+  if(rafId) return;
+  rafId=requestAnimationFrame(()=>{rafId=null;draw();});
+}
+
 function draw(){
   const d=data();
   if($('seasonHint')) $('seasonHint').textContent=`뒷면 시즌 표기 — ${d.season} (시음일에서 자동)`;
@@ -2329,6 +2456,70 @@ function download(blob,label){
   setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 }
 
+/* ── 이 기기에 기억해 두는 것 ──
+   시음자 이름·디자인 취향·맛 지도 축은 사람마다 거의 고정이다.
+   저장소가 막힌 환경(미리보기 등)에서는 조용히 건너뛴다. */
+const MEM_KEY='bwc-card-v1';
+function remember(){
+  try{
+    localStorage.setItem(MEM_KEY,JSON.stringify({
+      taster:$('taster').value.trim(),
+      design:$('design').value,
+      frame:$('frame').value,
+      axisNames:axes.map(a=>a.n)
+    }));
+  }catch(e){}
+}
+function restore(){
+  let m=null;
+  try{ m=JSON.parse(localStorage.getItem(MEM_KEY)||'null'); }catch(e){}
+  if(!m) return;
+  if(m.taster && !$('taster').value.trim()) $('taster').value=m.taster;
+  if(m.design && [...$('design').options].some(o=>o.value===m.design))
+    $('design').value=m.design;      // 목록에서 내려간 테마는 되살리지 않는다
+  if(m.frame && FRAMES[m.frame]) $('frame').value=m.frame;
+  if(Array.isArray(m.axisNames)&&m.axisNames.length>=3){
+    axes=m.axisNames.map(n=>({n,v:5}));
+    axesTouched=false;
+  }
+  if(m.taster) $('memHint').textContent=`${m.taster} 님으로 기억하고 있습니다`;
+}
+$('forgetMe').addEventListener('click',()=>{
+  try{ localStorage.removeItem(MEM_KEY); }catch(e){}
+  $('taster').value='';
+  $('memHint').textContent='기억한 내용을 지웠습니다';
+  $('taster').focus();
+});
+
+/* ── 다음 병 준비 ──
+   병이 바뀌면 달라지는 것만 비운다.
+   시음자·날짜·테마·축 이름·디자인은 그대로 둔다. */
+function clearForNext(){
+  ['verdict','nose','palate','finish','score'].forEach(id=>{
+    $(id).value=''; $(id).classList.remove('missing');
+  });
+  photo=null;
+  $('photo').value='';
+  $('pzoom').value=100;$('pox').value=0;$('poy').value=0;$('pzoomV').textContent='100%';
+  $('photoStatus').textContent='끌어다 놓기 · 붙여넣기(Ctrl+V)도 됩니다';
+  $('photoStatus').className='status';
+  axes=axes.map(a=>({n:a.n,v:5}));
+  axesTouched=false;
+  renderAxes();renderChips();draw();
+  $('carryWarn').style.display='none';
+  $('nextCard').style.display='none';
+  $('saveStatus').textContent='';$('saveStatus').className='status';
+  $('kkFront').src='';$('kkBack').src='';$('kakaoOut').style.display='none';
+  $('verdict').scrollIntoView({behavior:'smooth',block:'center'});
+}
+$('nextCard').addEventListener('click',clearForNext);
+$('carryClear').addEventListener('click',clearForNext);
+
+/* 병만 바꾸고 앞 병 기록을 그대로 둔 채 저장하는 사고를 막는다 */
+function noteFilled(){
+  return ['verdict','nose','palate','finish','score'].some(id=>$(id).value.trim());
+}
+
 /* ── 필수 항목 검사 ── */
 const REQUIRED=[['taster','시음자'],['name','위스키 이름'],['verdict','한 줄'],
   ['nose','향'],['palate','맛'],['finish','여운']];
@@ -2356,6 +2547,13 @@ const MOBILE=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');
 if(MOBILE) $('mobileTip').style.display='';
 let lastFiles=null;
 let lastBlobs=null;
+$('closeKakao').addEventListener('click',()=>{
+  $('kkFront').src='';$('kkBack').src='';
+  $('kakaoOut').style.display='none';
+  $('saveStatus').textContent='';$('saveStatus').className='status';
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+
 
 $('savePng').addEventListener('click',async e=>{
   const miss=checkRequired();
@@ -2374,6 +2572,7 @@ $('savePng').addEventListener('click',async e=>{
   try{
   // 다운로드는 '방금 누른 동작'에서만 허용된다.
   // 네트워크를 먼저 기다리면 그 권한이 만료돼 조용히 막히므로, 파일부터 내려받는다.
+  $('kkFront').src='';$('kkBack').src='';$('kakaoOut').style.display='none';
   st.textContent='카드 만드는 중…';st.className='status';
 
   side='front';draw();
@@ -2399,29 +2598,33 @@ $('savePng').addEventListener('click',async e=>{
     $('kakaoOut').style.display='';
     $('kakaoOut').scrollIntoView({behavior:'smooth',block:'start'});
   }
-  const KAKAO_MSG='카카오톡 안에서는 아래 이미지를 길게 눌러 저장하세요';
+  const KAKAO_MSG='아래 이미지를 길게 눌러 저장하세요 — 끝나면 [닫기]';
+  let imgMsg='';
   if(navigator.canShare&&navigator.canShare({files:lastFiles})){
     st.textContent='공유창 여는 중…';
     try{
       await navigator.share({files:lastFiles,title:'시음카드'});
-      st.textContent='공유창에서 [이미지 저장]을 고르면 갤러리에 들어갑니다';
-      st.className='status ok';
+      imgMsg='공유창에서 [이미지 저장]';
+      st.textContent=imgMsg; st.className='status ok';
     }catch(err){
-      if(err&&err.name==='AbortError'){ st.textContent='공유를 취소했습니다';st.className='status'; }
-      else if(INAPP){ st.textContent=KAKAO_MSG;st.className='status ok';showForLongPress(); }
-      else{ download(fb,'앞면');
+      if(err&&err.name==='AbortError'){ imgMsg='공유 취소'; st.textContent='공유를 취소했습니다';st.className='status'; }
+      else if(INAPP){ imgMsg='이미지 표시함'; st.textContent=KAKAO_MSG;st.className='status ok';showForLongPress(); }
+      else{ download(fb,'앞면'); imgMsg='앞면 내려받음';
             st.textContent='공유창을 열지 못해 앞면을 내려받았습니다';st.className='status err'; }
     }
   }else if(INAPP){
+    imgMsg='이미지 표시함';
     st.textContent=KAKAO_MSG;st.className='status ok';
     showForLongPress();
   }else{
-    download(fb,'앞면');
+    download(fb,'앞면'); imgMsg='앞면 내려받음';
     st.textContent='앞면을 내려받았습니다';st.className='status ok';
   }
 
   // ③ 기록은 마지막에 — 실패해도 파일은 이미 받았다
-  await saveToSheet();
+  await saveToSheet(imgMsg);
+  remember();                       // 이름·디자인 취향을 이 기기에 남긴다
+  $('nextCard').style.display='';   // 다음 병으로 넘어갈 수 있게
   }catch(err){
     side=cur;draw();
     st.textContent='카드를 만들지 못했습니다 — '+(err&&err.message?err.message:err);
@@ -2432,11 +2635,12 @@ $('savePng').addEventListener('click',async e=>{
   }
 });
 
-async function saveToSheet(){
+async function saveToSheet(imgMsg){
+  const head=imgMsg?imgMsg+' · ':'';
   const url=$('api').value.trim(),st=$('saveStatus'),d=data();
-  if(!url){st.textContent='카드만 저장됨 — 시트가 연결되지 않았습니다';st.className='status err';return;}
-  if(!d.taster.trim()){st.textContent='카드만 저장됨 — 시음자 이름이 비어 있어 기록은 남기지 않았습니다';st.className='status err';return;}
-  st.textContent='기록 저장 중…';st.className='status';
+  if(!url){st.textContent=head+'시트가 연결되지 않아 기록은 남기지 않았습니다';st.className='status err';return;}
+  if(!d.taster.trim()){st.textContent=head+'시음자 이름이 비어 있어 기록은 남기지 않았습니다';st.className='status err';return;}
+  st.textContent=head+'기록 저장 중…';st.className='status';
   try{
     const body={date:d.date,taster:d.taster,name:d.name,verdict:d.verdict,nose:d.nose,
       palate:d.palate,finish:d.finish,score:d.score,theme:d.theme,
@@ -2449,10 +2653,10 @@ async function saveToSheet(){
     }
     if(lastErr) throw lastErr;
     const j=await r.json();
-    if(j.ok){st.textContent=j.updated?`기록 갱신됨 (${j.row}행 — 같은 날 같은 병)`:`기록 남김 (${j.row}행)`;st.className='status ok';}
-    else{st.textContent='기록 실패 — '+(j.error||'알 수 없는 오류');st.className='status err';}
+    if(j.ok){st.textContent=head+(j.updated?`기록 갱신됨 (${j.row}행 — 같은 날 같은 병)`:`기록 남김 (${j.row}행)`);st.className='status ok';}
+    else{st.textContent=head+'기록 실패 — '+(j.error||'알 수 없는 오류');st.className='status err';}
   }catch(e){
-    st.textContent='기록 실패 ('+((e&&e.name)||e)+') — 잠시 뒤 [저장]을 다시 누르면 그 줄이 갱신됩니다';
+    st.textContent=head+'기록 실패 ('+((e&&e.name)||e)+') — 잠시 뒤 [저장]을 다시 누르면 그 줄이 갱신됩니다';
     st.className='status err';
   }
 }
@@ -2602,8 +2806,10 @@ function autoFitPhoto(quiet){
   const base=mode==='cover'?Math.max(w/iw,h/ih):Math.min(w/iw,h/ih);
 
   // 병이 창을 적당히 채우도록 — 세로로 길면 높이를, 가로로 넓으면 폭을 기준으로
+  // 채우기 모드에서는 어떤 경우에도 창을 다 덮어야 한다 (양옆이 비면 안 된다)
+  const coverBase = Math.max(w/iw, h/ih);
   const sc = mode==='cover'
-    ? Math.min((h*1.06)/box.h, (w*0.82)/box.w)
+    ? Math.max(coverBase, Math.min((h*1.06)/box.h, (w*0.82)/box.w))
     : Math.min((h*0.90)/box.h, (w*0.90)/box.w);
 
   // 세로로 긴 병은 라벨이 보이도록 살짝 위쪽을 중심에 둔다
@@ -2643,7 +2849,7 @@ cv.addEventListener('pointermove',e=>{
   const ny=+$('poy').value+((y-lastY)/(P.h*.5))*100;
   $('pox').value=Math.max(-100,Math.min(100,nx));
   $('poy').value=Math.max(-100,Math.min(100,ny));
-  lastX=x;lastY=y;draw();
+  lastX=x;lastY=y;scheduleDraw(0);
 });
 ['pointerup','pointercancel'].forEach(ev=>cv.addEventListener(ev,()=>{dragging=false;cv.style.cursor='';}));
 
@@ -2657,6 +2863,7 @@ const CONFIG={ API:'https://script.google.com/macros/s/AKfycbwe6ki74g4Rwgf-nOxNB
 const Q=new URLSearchParams(location.search);
 if(Q.get('api')||CONFIG.API) $('api').value=Q.get('api')||CONFIG.API;
 
+restore();
 renderOptions();renderAxes();renderChips();fillTheme();fillPreset();
 $('frameBox').style.display=$('design').value==='컬렉터'?'':'none';
 
@@ -2672,6 +2879,6 @@ if($('api').value.trim()){
   loadSheet();
 }
 $('customBox').style.display=$('design').value==='내 디자인'?'':'none';
-document.fonts.ready.then(draw);
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(draw);
 draw();
 </script>
