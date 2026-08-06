@@ -78,7 +78,7 @@
   <form onsubmit="return false">
     <h1>시음카드</h1>
     <p class="sub">병 정보는 시트에서, 느낌은 내가.<br>마우스를 카드 위에 올리면 빛이 움직입니다.
-      <span style="color:#C9A44C">· v13</span></p>
+      <span style="color:#C9A44C">· v15</span></p>
 
     <section>
       <p class="legend">내 기록</p>
@@ -2600,7 +2600,8 @@ $('savePng').addEventListener('click',async e=>{
   }
   const KAKAO_MSG='아래 이미지를 길게 눌러 저장하세요 — 끝나면 [닫기]';
   let imgMsg='';
-  if(navigator.canShare&&navigator.canShare({files:lastFiles})){
+  // 윈도우·맥도 공유창을 지원하지만 PC 에서는 파일로 받는 편이 자연스럽다 — 공유는 폰에서만
+  if(MOBILE && navigator.canShare && navigator.canShare({files:lastFiles})){
     st.textContent='공유창 여는 중…';
     try{
       await navigator.share({files:lastFiles,title:'시음카드'});
@@ -2617,8 +2618,11 @@ $('savePng').addEventListener('click',async e=>{
     st.textContent=KAKAO_MSG;st.className='status ok';
     showForLongPress();
   }else{
-    download(fb,'앞면'); imgMsg='앞면 내려받음';
-    st.textContent='앞면을 내려받았습니다';st.className='status ok';
+    download(fb,'앞면');
+    if(!MOBILE){ await wait(700); download(bb,'뒷면'); imgMsg='앞뒤 내려받음'; }
+    else imgMsg='앞면 내려받음';
+    st.textContent=MOBILE?'앞면을 내려받았습니다':'앞면·뒷면을 내려받았습니다';
+    st.className='status ok';
   }
 
   // ③ 기록은 마지막에 — 실패해도 파일은 이미 받았다
