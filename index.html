@@ -78,11 +78,17 @@
   <form onsubmit="return false">
     <h1>시음카드</h1>
     <p class="sub">병 정보는 시트에서, 느낌은 내가.<br>마우스를 카드 위에 올리면 빛이 움직입니다.
-      <span style="color:#C9A44C">· v15</span></p>
+      <span style="color:#C9A44C">· v19</span></p>
 
     <section>
       <p class="legend">내 기록</p>
       <p class="reqnote"><span class="req">*</span> 표시는 저장할 때 반드시 채워야 합니다</p>
+      <div id="draftBar" style="display:none;margin:0 0 12px;padding:10px 12px;
+           border:1px solid rgba(201,164,76,.5);background:rgba(201,164,76,.1);border-radius:3px">
+        <span style="font-size:12px" id="draftMsg">쓰다 만 기록이 있습니다</span>
+        <button id="draftLoad" style="margin-left:8px">불러오기</button>
+        <button id="draftDrop">버리기</button>
+      </div>
       <div id="carryWarn" style="display:none;margin:0 0 12px;padding:10px 12px;
            border:1px solid rgba(211,118,92,.5);background:rgba(211,118,92,.1);border-radius:3px">
         <span style="font-size:12px">앞 병의 기록이 그대로 남아 있습니다</span>
@@ -94,11 +100,12 @@
         <div class="wide"><label for="nose">향<span class="req">*</span></label><textarea id="nose" placeholder="코를 대고 처음 떠오른 것"></textarea><div class="chips cats" id="cats-nose"></div><div class="chips" id="chips-nose"></div></div>
         <div class="wide"><label for="palate">맛<span class="req">*</span></label><textarea id="palate" placeholder="입에 머금었을 때"></textarea><div class="chips cats" id="cats-palate"></div><div class="chips" id="chips-palate"></div></div>
         <div class="wide"><label for="finish">여운<span class="req">*</span></label><textarea id="finish" placeholder="삼키고 나서 남는 것"></textarea><div class="chips cats" id="cats-finish"></div><div class="chips" id="chips-finish"></div></div>
-        <div><label for="score">내 점수</label><input id="score" placeholder="0~100"></div>
+        <div><label for="score">내 점수</label><input id="score" placeholder="0~100" inputmode="numeric" maxlength="3"></div>
         <div><label for="taster">시음자<span class="req">*</span></label><input id="taster" placeholder="이름 또는 닉네임">
           <p class="status" style="margin:5px 0 0"><span id="memHint">이 기기에 기억해 둡니다</span>
             <button id="forgetMe" style="padding:3px 7px;font-size:10px;margin-left:6px">지우기</button></p></div>
-        <div><label for="date">시음일</label><input id="date"></div>
+        <div><label for="date">시음일</label><input id="date" inputmode="numeric" maxlength="10">
+          <p class="status" id="dateHint" style="margin:4px 0 0"></p></div>
         <div><label for="themeSel">모임 테마</label><select id="themeSel"></select></div>
         <div class="wide" id="themeCustomBox"><label for="theme">테마 직접 입력</label><input id="theme" value="아일라 섬 한 바퀴"></div>
         <div class="wide"><p class="status" id="themeHint" style="margin:0"></p></div>
@@ -197,6 +204,8 @@
       <button id="flip">뒷면 보기</button>
       <button class="primary" id="savePng">저장 · 공유</button>
       <button id="nextCard" style="display:none">다음 병 준비</button>
+      <button id="undoClear" style="display:none">되돌리기</button>
+      <button id="kakaoShare" style="display:none">카톡으로 보내기</button>
     </div>
     <p class="status" id="saveStatus"></p>
     <div id="kakaoOut" style="display:none;width:100%;max-width:430px;margin-top:6px">
@@ -2491,10 +2500,151 @@ $('forgetMe').addEventListener('click',()=>{
   $('taster').focus();
 });
 
+/* ── 입력값 다듬기 ──
+   카드에 적힌 그대로 찍히므로, 숫자여야 할 것은 숫자만 남긴다. */
+$('score').addEventListener('input',e=>{
+  const digits=e.target.value.replace(/[^0-9]/g,'');
+  const v = digits==='' ? '' : String(Math.min(100,parseInt(digits,10)));
+  if(v!==e.target.value){ e.target.value=v; scheduleDraw(0); }
+});
+
+/* 2026.08.06 · 20260806 · 2026-8-6 을 모두 받아 같은 꼴로 맞춘다 */
+function normDate(str){
+  const ok=(y,m,d)=> y>=2000&&y<=2100&&m>=1&&m<=12&&d>=1&&d<=31
+    ? `${y}.${String(m).padStart(2,'0')}.${String(d).padStart(2,'0')}` : null;
+  const sep=/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/.exec(String(str));   // 2026-8-6, 2026.08.06
+  if(sep) return ok(+sep[1],+sep[2],+sep[3]);
+  const only=String(str).replace(/[^0-9]/g,'');                      // 20260806
+  if(only.length===8) return ok(+only.slice(0,4),+only.slice(4,6),+only.slice(6,8));
+  return null;
+}
+$('date').addEventListener('blur',()=>{
+  const el=$('date'), h=$('dateHint');
+  if(!el.value.trim()){ h.textContent='';el.classList.remove('missing');return; }
+  const n=normDate(el.value);
+  if(n){
+    el.value=n; el.classList.remove('missing');
+    h.textContent=''; scheduleDraw(0);
+  }else{
+    el.classList.add('missing');
+    h.textContent='연월일 8자리로 적어주세요 (예: 2026.08.06)';
+    h.className='status err';
+  }
+});
+
+/* ── 카카오톡 말풍선 공유 ──
+   말풍선에는 인터넷에 있는 이미지만 넣을 수 있다.
+   그래서 카카오 서버에 먼저 올리고, 받은 주소로 메시지를 만든다. */
+let kakaoReady=null;
+function loadKakao(){
+  if(kakaoReady) return kakaoReady;
+  kakaoReady=new Promise((res,rej)=>{
+    if(window.Kakao) return res(window.Kakao);
+    const sc=document.createElement('script');
+    sc.src=KAKAO.SDK; sc.crossOrigin='anonymous';
+    sc.onload=()=>res(window.Kakao);
+    sc.onerror=()=>rej(new Error('SDK 불러오기 실패'));
+    document.head.appendChild(sc);
+  }).then(K=>{ if(!K.isInitialized()) K.init(KAKAO.KEY); return K; });
+  return kakaoReady;
+}
+
+/* 5MB 제한이 있어 PNG 대신 JPEG 으로 줄여 보낸다 */
+function frontJpeg(){
+  const cur=side;
+  side='front'; draw();
+  return new Promise(res=>cv.toBlob(b=>{ side=cur; draw(); res(b); },'image/jpeg',0.92));
+}
+
+$('kakaoShare').addEventListener('click',async e=>{
+  const btn=e.currentTarget, st=$('saveStatus'), d=data();
+  btn.disabled=true;
+  st.textContent='카드를 카카오에 올리는 중…'; st.className='status';
+  try{
+    const K=await loadKakao();
+    const blob=await frontJpeg();
+    if(blob.size>5*1024*1024) throw new Error('이미지가 5MB를 넘습니다');
+    const up=await K.Share.uploadImage({ file:[new File([blob],'card.jpg',{type:'image/jpeg'})] });
+    const img=up.infos.original;
+    const here=location.origin+location.pathname;
+    await K.Share.sendDefault({
+      objectType:'feed',
+      content:{
+        title:`${d.name}${d.score?'  '+d.score+'점':''}`,
+        description:(d.verdict||d.nose||'부천 위스키 클럽 시음카드').slice(0,80),
+        imageUrl:img.url, imageWidth:img.width, imageHeight:img.height,
+        link:{ mobileWebUrl:here, webUrl:here }
+      },
+      itemContent:{ profileText:`${d.taster||''} · ${d.date}` },
+      buttons:[{ title:'나도 카드 만들기', link:{ mobileWebUrl:here, webUrl:here } }],
+      installTalk:true
+    });
+    st.textContent='카카오톡으로 보냈습니다'; st.className='status ok';
+  }catch(err){
+    st.textContent='카톡 공유 실패 — '+((err&&err.message)||err);
+    st.className='status err';
+  }finally{ btn.disabled=false; }
+});
+
+/* ── 쓰던 내용 임시 보관 ──
+   새로고침·창 닫힘·실수로 비우기를 대비한다.
+   사진은 너무 커서 담지 못하므로 다시 올려야 한다. */
+const DRAFT_KEY='bwc-draft-v1';
+const DRAFT_FIELDS=['taster','date','theme','name','latin','region','abv','age','cask',
+                    'verdict','nose','palate','finish','score'];
+
+function snapshot(){
+  const o={at:Date.now(),axes:axes.map(a=>({n:a.n,v:a.v})),touched:axesTouched};
+  DRAFT_FIELDS.forEach(id=>{ o[id]=$(id).value; });
+  return o;
+}
+function applySnapshot(o){
+  if(!o) return;
+  DRAFT_FIELDS.forEach(id=>{ if(o[id]!==undefined) $(id).value=o[id]; });
+  if(Array.isArray(o.axes)&&o.axes.length>=3){
+    axes=o.axes.map(a=>({n:a.n,v:+a.v}));
+    axesTouched=!!o.touched;
+    renderAxes();renderChips();
+  }
+  draw();
+}
+let draftTimer=null;
+function saveDraft(){
+  if(draftTimer) clearTimeout(draftTimer);
+  draftTimer=setTimeout(()=>{
+    draftTimer=null;
+    try{ localStorage.setItem(DRAFT_KEY,JSON.stringify(snapshot())); }catch(e){}
+  },1000);
+}
+function dropDraft(){ try{ localStorage.removeItem(DRAFT_KEY); }catch(e){} }
+
+/* 노트에 뭔가 적혀 있을 때만 보관한다 */
+document.addEventListener('input',e=>{
+  if(e.target.closest('#axes')||DRAFT_FIELDS.includes(e.target.id)) { if(noteFilled()) saveDraft(); }
+});
+
+function offerDraft(){
+  let o=null;
+  try{ o=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null'); }catch(e){}
+  if(!o) return;
+  const notes=['verdict','nose','palate','finish'].filter(k=>(o[k]||'').trim());
+  if(!notes.length){ dropDraft(); return; }
+  const when=new Date(o.at||Date.now());
+  const p2=n=>String(n).padStart(2,'0');
+  $('draftMsg').textContent=
+    `쓰다 만 기록이 있습니다 — ${o.name||'위스키'} · ${p2(when.getMonth()+1)}/${p2(when.getDate())} ${p2(when.getHours())}:${p2(when.getMinutes())}`;
+  $('draftBar').style.display='';
+  $('draftLoad').onclick=()=>{ applySnapshot(o); $('draftBar').style.display='none'; };
+  $('draftDrop').onclick=()=>{ dropDraft(); $('draftBar').style.display='none'; };
+}
+
 /* ── 다음 병 준비 ──
    병이 바뀌면 달라지는 것만 비운다.
    시음자·날짜·테마·축 이름·디자인은 그대로 둔다. */
+let undoSnap=null;
 function clearForNext(){
+  undoSnap=snapshot();               // 비우기 직전 상태를 챙겨둔다
+  $('undoClear').style.display='';
   ['verdict','nose','palate','finish','score'].forEach(id=>{
     $(id).value=''; $(id).classList.remove('missing');
   });
@@ -2511,7 +2661,15 @@ function clearForNext(){
   $('saveStatus').textContent='';$('saveStatus').className='status';
   $('kkFront').src='';$('kkBack').src='';$('kakaoOut').style.display='none';
   $('verdict').scrollIntoView({behavior:'smooth',block:'center'});
+  dropDraft();
 }
+$('undoClear').addEventListener('click',()=>{
+  if(!undoSnap) return;
+  applySnapshot(undoSnap);
+  undoSnap=null;
+  $('undoClear').style.display='none';
+  $('saveStatus').textContent='되돌렸습니다';$('saveStatus').className='status ok';
+});
 $('nextCard').addEventListener('click',clearForNext);
 $('carryClear').addEventListener('click',clearForNext);
 
@@ -2628,6 +2786,7 @@ $('savePng').addEventListener('click',async e=>{
   // ③ 기록은 마지막에 — 실패해도 파일은 이미 받았다
   await saveToSheet(imgMsg);
   remember();                       // 이름·디자인 취향을 이 기기에 남긴다
+  dropDraft();                      // 저장했으니 임시 보관본은 필요 없다
   $('nextCard').style.display='';   // 다음 병으로 넘어갈 수 있게
   }catch(err){
     side=cur;draw();
@@ -2861,6 +3020,17 @@ cv.addEventListener('pointermove',e=>{
    배포할 때 여기에 웹앱 주소를 한 번 넣어두면
    멤버들은 주소를 몰라도 바로 쓸 수 있습니다.
    ───────────────────────────────────────────── */
+/* 카카오톡 말풍선 공유 — 쓰려면 KEY 를 채운다.
+   1) developers.kakao.com 에서 앱 만들기 → JavaScript 키 복사
+   2) [앱] > [플랫폼 키] > [JavaScript 키] > [JavaScript SDK 도메인] 에
+      https://lmhpower-stack.github.io 등록
+   3) [도구] > [카카오톡 공유] 는 별도 설정 없이 기본 템플릿으로 동작
+   KEY 가 비어 있으면 버튼 자체가 나타나지 않는다. */
+const KAKAO={
+  KEY:'25b697bb4a3ff6610b5acdfaaf025dbe',                     // JavaScript 키
+  SDK:'https://t1.kakaocdn.net/kakao_js_sdk/2.7.5/kakao.min.js'
+};
+
 const CONFIG={ API:'https://script.google.com/macros/s/AKfycbwe6ki74g4Rwgf-nOxNBaNzIVF7jMVW9oDNBr_PRN4zuIaKojZUnbJpyh6kJBb5KdWCyg/exec' };
 
 /* 주소창으로 시트를 지정할 수도 있다 — ?api=… */
@@ -2883,6 +3053,8 @@ if($('api').value.trim()){
   loadSheet();
 }
 $('customBox').style.display=$('design').value==='내 디자인'?'':'none';
+if(KAKAO.KEY) $('kakaoShare').style.display='';
+offerDraft();
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(draw);
 draw();
 </script>
