@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>시음카드 · 부천 위스키 클럽</title>
+<title>시음카드</title>
 <style>
   *{box-sizing:border-box}
   body{margin:0;padding:26px;background:#0C0A09;color:#E7DABD;
@@ -78,7 +78,7 @@
   <form onsubmit="return false">
     <h1>시음카드</h1>
     <p class="sub">병 정보는 시트에서, 느낌은 내가.<br>마우스를 카드 위에 올리면 빛이 움직입니다.
-      <span style="color:#C9A44C">· v24</span></p>
+      <span style="color:#C9A44C">· v26</span></p>
 
     <section>
       <p class="legend">내 기록</p>
@@ -141,6 +141,16 @@
         <div><label for="abv">도수</label><input id="abv" value="43%"></div>
         <div><label for="age">숙성</label><input id="age" value="16년"></div>
         <div><label for="cask">캐스크</label><input id="cask" value="엑스버번 · 셰리"></div>
+      </div>
+    </section>
+
+    <section>
+      <p class="legend">클럽 표기</p>
+      <div class="grid">
+        <div><label for="clubName">클럽 이름</label><input id="clubName" placeholder="술터디"></div>
+        <div><label for="clubMark">뒷면 큰 글씨</label><input id="clubMark" placeholder="비우면 문양만" maxlength="8"></div>
+        <div class="wide"><label for="clubSub">뒷면 작은 글씨</label><input id="clubSub" placeholder="EST. 2025 · BUCHEON"></div>
+        <div class="wide"><p class="status" style="margin:0">한 번 정하면 이 기기에 기억됩니다</p></div>
       </div>
     </section>
 
@@ -233,6 +243,14 @@ window.addEventListener('unhandledrejection',ev=>{
   const st=document.getElementById('saveStatus');
   if(st){st.textContent='오류: '+((ev.reason&&ev.reason.message)||ev.reason);st.className='status err';}
 });
+/* 클럽 표기 — 카드에 찍히는 이름. 화면에서 바꿀 수 있고 이 값은 기본값이다. */
+const CLUB={
+  name:'술터디',
+  mark:'술터디',                    // 뒷면 큰 문장 — 비우면 문양만 남는다
+  sub:'EST. 2025 · BUCHEON',
+  micro:'SOOLSTUDY'
+};
+
 const SANS='"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif';
 const SERIF='Georgia,"Nanum Myeongjo","Apple SD Myungjo","Noto Serif KR",Batang,serif';
 const W=1080,Hc=1512;
@@ -255,15 +273,15 @@ let AXIS_OPTIONS=[...FALLBACK], AXIS_META=null, SHEET_WHISKIES=null;
 let axes=[{n:'피트',v:10},{n:'셰리',v:4},{n:'과일',v:4},{n:'바닐라',v:4},{n:'스파이스',v:6}];
 
 const PRESETS={
- '라가불린 16년':{latin:'LAGAVULIN 16',region:'아일라 싱글몰트',abv:'43%',age:'16년',cask:'엑스버번 · 셰리',
+ '라가불린 16년':{latin:'LAGAVULIN 16',region:'스코틀랜드 아일라 · 싱글몰트',abv:'43%',age:'16년',cask:'리필 아메리칸·유러피언 오크',
   axes:[['피트',10],['셰리',4],['과일',4],['바닐라',4],['스파이스',6]]},
- '라프로익 PX':{latin:'LAPHROAIG PX CASK',region:'아일라 싱글몰트',abv:'48%',age:'NAS',cask:'PX 셰리 피니시',
+ '라프로익 PX':{latin:'LAPHROAIG PX CASK',region:'스코틀랜드 아일라 · 싱글몰트',abv:'48%',age:'NAS',cask:'쿼터 캐스크 + PX 셰리',
   axes:[['피트',10],['셰리',8],['단맛',8],['약재',6],['스파이스',4]]},
- '맥캘란 18 쉐리':{latin:'MACALLAN 18 SHERRY OAK',region:'스페이사이드 싱글몰트',abv:'43%',age:'18년',cask:'셰리 오크',
+ '맥캘란 18 쉐리':{latin:'THE MACALLAN SHERRY OAK 18',region:'스코틀랜드 스페이사이드 · 싱글몰트',abv:'43%',age:'18년',cask:'셰리 시즌드 유러피언 오크',
   axes:[['셰리',10],['건포도',8],['오크',8],['초콜릿',6],['스파이스',6]]},
- '옥토모어 14.2':{latin:'OCTOMORE 14.2',region:'아일라 싱글몰트',abv:'58%',age:'5년',cask:'소테른 캐스크',
+ '옥토모어 14.2':{latin:'OCTOMORE 14.2',region:'스코틀랜드 아일라 · 싱글몰트',abv:'57.7%',age:'5년',cask:'올로로쏘 셰리 + 아마로네 와인',
   axes:[['피트',10],['바디',10],['스파이스',8],['과일',6],['단맛',6]]},
- '글렌피딕 21년':{latin:'GLENFIDDICH 21',region:'스페이사이드 싱글몰트',abv:'40%',age:'21년',cask:'캐리비안 럼 피니시',
+ '글렌피딕 21년':{latin:'GLENFIDDICH 21 GRAN RESERVA',region:'스코틀랜드 스페이사이드 · 싱글몰트',abv:'40%',age:'21년',cask:'버번 캐스크 + 카리브 럼 캐스크 피니시',
   axes:[['과일',10],['바닐라',8],['꿀',8],['스파이스',6],['오크',6]]}
 };
 
@@ -518,6 +536,9 @@ function loadWhisky(){
   draw();
 }
 
+['clubName','clubMark','clubSub'].forEach(id=>
+  $(id).addEventListener('change',remember));
+
 $('design').addEventListener('change',()=>{
   $('frameBox').style.display=$('design').value==='컬렉터'?'':'none';
   $('customBox').style.display=$('design').value==='내 디자인'?'':'none';
@@ -597,6 +618,10 @@ function seasonOf(dateStr){
 
 function data(){
   const F=FRAMES[$('frame').value]||FRAMES['은'];
+  CLUB.name  = $('clubName').value.trim() || '술터디';
+  CLUB.mark  = $('clubMark').value.trim();          // 비우면 뒷면 문장 없이 문양만
+  CLUB.sub   = $('clubSub').value.trim()  || 'EST. 2025 · BUCHEON';
+  CLUB.micro = (CLUB.name+' · '+CLUB.mark).toUpperCase();
   return {F,season:seasonOf($('date').value),
     verdict:$('verdict').value,nose:$('nose').value,palate:$('palate').value,finish:$('finish').value,
     score:$('score').value,taster:$('taster').value,date:$('date').value,theme:$('theme').value,
@@ -628,6 +653,11 @@ function wrap(str,maxW,size,weight,family){
 function para(str,x,y,maxW,o={}){
   const ls=wrap(str,maxW,o.size||24,o.weight,o.family),lh=o.lh||(o.size||24)*1.5;
   ls.forEach((l,i)=>text(l,x,y+i*lh,o));return y+ls.length*lh;
+}
+/* 뒷면 문장 — 글자가 많아지면 줄인다. 약자 두세 자와 한글 이름을 모두 받는다 */
+function fitMark(str,base){
+  const n=[...String(str)].length;
+  return n<=3 ? base : Math.max(base*0.4, base*(3/n)*1.15);
 }
 function fit(str,maxW,start,min,weight,family){
   let s=start,l=wrap(str,maxW,s,weight,family);
@@ -995,7 +1025,7 @@ function ornateFrame(P){
   dentil(52,W-52,Hc-50,11,4,G,.35);
 
   // 마이크로프린트
-  microtext(56,W-56,58,'BUCHEON WHISKY CLUB','#C8A45C',.32);
+  microtext(56,W-56,58,CLUB.micro,'#C8A45C',.32);
   microtext(56,W-56,Hc-56,'TASTING CARD','#C8A45C',.32);
 
   // 모서리 갈고리 + 장미
@@ -1053,7 +1083,7 @@ function drawFrontEngraved(d,P){
   const M=104,R=W-M;
 
   /* 머리 */
-  text('부천 위스키 클럽',M,124,{size:17,weight:600,spacing:9,color:GOLD});
+  text(CLUB.name,M,124,{size:17,weight:600,spacing:9,color:GOLD});
   text(d.date,R,124,{size:17,weight:600,spacing:4,color:MUT,align:'right'});
   ctx.strokeStyle='rgba(200,164,92,.3)';ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(M,146);ctx.lineTo(R,146);ctx.stroke();
@@ -1176,7 +1206,7 @@ function drawFrontEngraved(d,P){
   if(d.theme)text(d.theme,M,fy,{size:17,weight:500,spacing:2,color:MUT});
   engrave(d.taster.trim()?`${d.taster}  ·  ${d.date}`:d.date,R,fy,
     {size:25,family:SERIF,color:INK,align:'right'});
-  text('부천 위스키 클럽',R,fy+32,{size:12,weight:600,spacing:5,color:'rgba(244,235,217,.3)',align:'right'});
+  text(CLUB.name,R,fy+32,{size:12,weight:600,spacing:5,color:'rgba(244,235,217,.3)',align:'right'});
 
   grainAmt=P.grain;
 }
@@ -1212,9 +1242,9 @@ function drawBackEngraved(d,P){
     ctx.closePath();ctx.stroke();
   }
   ctx.globalAlpha=1;
-  engrave('BWC',cx,cy+26,{size:104,weight:700,family:SERIF,color:INK,align:'center'});
-  text('부천 위스키 클럽',cx,cy+92,{size:24,weight:600,spacing:10,color:GOLD,align:'center'});
-  text('EST. 2025 · BUCHEON',cx,300,{size:17,weight:600,spacing:10,color:MUT,align:'center'});
+  if(CLUB.mark) engrave(CLUB.mark,cx,cy+26,{size:fitMark(CLUB.mark,104),weight:700,family:SERIF,color:INK,align:'center'});
+  text(CLUB.name,cx,cy+92,{size:24,weight:600,spacing:10,color:GOLD,align:'center'});
+  text(CLUB.sub,cx,300,{size:17,weight:600,spacing:10,color:MUT,align:'center'});
   engrave('언제나 좋은 위스키, 좋은 사람들과',cx,1030,{size:25,family:SERIF,color:INK,align:'center'});
 
   const M=104,R=W-M;
@@ -1345,7 +1375,7 @@ function drawFrontAmber(d,P){
   ctx.strokeStyle='rgba(255,240,210,.5)';ctx.lineWidth=1.6;rrect(22,22,W-44,Hc-44,24);ctx.stroke();
 
   const M=94,R=W-M;
-  text('부천 위스키 클럽',M,124,{size:16,weight:600,spacing:9,color:'rgba(255,243,223,.75)'});
+  text(CLUB.name,M,124,{size:16,weight:600,spacing:9,color:'rgba(255,243,223,.75)'});
   text(d.date,R,124,{size:16,weight:600,spacing:4,color:MUT,align:'right'});
 
   /* 사진 — 유리 너머 */
@@ -1436,7 +1466,7 @@ function drawFrontAmber(d,P){
   const fy=Hc-94;wave(fy-38);
   if(d.theme)text(d.theme,M,fy,{size:17,weight:500,spacing:2,color:MUT});
   text(d.taster.trim()?`${d.taster}  ·  ${d.date}`:d.date,R,fy,{size:25,family:SERIF,color:INK,align:'right'});
-  text('부천 위스키 클럽',R,fy+32,{size:12,weight:600,spacing:5,color:'rgba(255,243,223,.35)',align:'right'});
+  text(CLUB.name,R,fy+32,{size:12,weight:600,spacing:5,color:'rgba(255,243,223,.35)',align:'right'});
   grainAmt=P.grain;
 }
 
@@ -1461,9 +1491,9 @@ function drawBackAmber(d,P){
     ctx.closePath();ctx.stroke();
   }
   ctx.globalAlpha=1;
-  glow(()=>text('BWC',cx,cy+30,{size:108,weight:700,family:SERIF,color:INK,align:'center'}),'rgba(255,200,120,.9)',28);
-  text('부천 위스키 클럽',cx,cy+96,{size:25,weight:600,spacing:10,color:GOLD,align:'center'});
-  text('EST. 2025 · BUCHEON',cx,300,{size:17,weight:600,spacing:10,color:MUT,align:'center'});
+  if(CLUB.mark) glow(()=>text(CLUB.mark,cx,cy+30,{size:fitMark(CLUB.mark,108),weight:700,family:SERIF,color:INK,align:'center'}),'rgba(255,200,120,.9)',28);
+  text(CLUB.name,cx,cy+96,{size:25,weight:600,spacing:10,color:GOLD,align:'center'});
+  text(CLUB.sub,cx,300,{size:17,weight:600,spacing:10,color:MUT,align:'center'});
   text('언제나 좋은 위스키, 좋은 사람들과',cx,1040,{size:26,family:SERIF,color:P.note,align:'center'});
 
   const M=94,R=W-M;
@@ -1489,6 +1519,13 @@ function paperFibers(P){
   }
   ctx.restore();
 }
+/* 낙관에 넣을 두 줄 — 클럽 이름을 반으로 가른다 */
+function sealLines(){
+  const n=[...CLUB.name];
+  if(n.length<=2) return [CLUB.name];
+  const half=Math.ceil(n.length/2);
+  return [n.slice(0,half).join(''), n.slice(half).join('')];
+}
 function sealStamp(x,y,sz,P,lines){
   ctx.save();ctx.translate(x,y);ctx.rotate(-3*Math.PI/180);
   ctx.fillStyle=P.seal;ctx.globalAlpha=.88;
@@ -1507,7 +1544,7 @@ function drawFrontSumi(d,P){
   ctx.strokeStyle=hexA(GOLD,.55);ctx.lineWidth=1.2;ctx.strokeRect(44,44,W-88,Hc-88);
 
   const M=100,R=W-M;
-  text('부천 위스키 클럽',M,116,{size:15,weight:600,spacing:9,color:MUT});
+  text(CLUB.name,M,116,{size:15,weight:600,spacing:9,color:MUT});
   text(d.date,R,116,{size:15,weight:600,spacing:4,color:MUT,align:'right'});
 
   /* 엔소 + 사진 */
@@ -1584,7 +1621,7 @@ function drawFrontSumi(d,P){
   ctx.beginPath();ctx.moveTo(M,fy-40);ctx.lineTo(R,fy-40);ctx.stroke();
   if(d.theme)text(d.theme,M,fy,{size:17,weight:500,spacing:2,color:MUT});
   text(d.taster.trim()?`${d.taster}  ·  ${d.date}`:d.date,R-96,fy,{size:25,family:SERIF,color:INK,align:'right'});
-  sealStamp(R-44,fy-10,58,P,['부천','위스키']);
+  sealStamp(R-44,fy-10,58,P,sealLines());
   grainAmt=P.grain;
 }
 function drawBackSumi(d,P){
@@ -1604,9 +1641,9 @@ function drawBackSumi(d,P){
       const x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
     ctx.closePath();ctx.stroke();
   }
-  text('BWC',cx,cy+28,{size:104,weight:700,family:SERIF,color:INK,align:'center'});
-  text('부천 위스키 클럽',cx,cy+94,{size:24,weight:600,spacing:10,color:GOLD,align:'center'});
-  text('EST. 2025 · BUCHEON',cx,300,{size:16,weight:600,spacing:10,color:MUT,align:'center'});
+  if(CLUB.mark) text(CLUB.mark,cx,cy+28,{size:fitMark(CLUB.mark,104),weight:700,family:SERIF,color:INK,align:'center'});
+  text(CLUB.name,cx,cy+94,{size:24,weight:600,spacing:10,color:GOLD,align:'center'});
+  text(CLUB.sub,cx,300,{size:16,weight:600,spacing:10,color:MUT,align:'center'});
   text('언제나 좋은 위스키, 좋은 사람들과',cx,1020,{size:26,family:SERIF,color:P.note,align:'center'});
 
   const M=100,R=W-M;
@@ -1616,7 +1653,7 @@ function drawBackSumi(d,P){
   const nm=fit(d.name,R-M,25,18,600,SERIF);
   text(nm.line,cx,1296,{size:nm.size,weight:600,family:SERIF,color:MUT,align:'center'});
   text(d.taster.trim()?`${d.taster}  ·  ${d.date}`:d.date,cx,1352,{size:23,family:SERIF,color:P.note,align:'center'});
-  sealStamp(R-40,1352,58,P,['부천','위스키']);
+  sealStamp(R-40,1352,58,P,sealLines());
   grainAmt=P.grain;
 }
 
@@ -1661,7 +1698,7 @@ function drawFrontRiso(d,P){
   ctx.restore();
   ctx.strokeStyle=P.paper;ctx.lineWidth=6;ctx.beginPath();ctx.arc(ccx,ccy,cr,0,7);ctx.stroke();
 
-  text('부천 위스키 클럽',M,120,{size:15,weight:700,spacing:8,color:INK});
+  text(CLUB.name,M,120,{size:15,weight:700,spacing:8,color:INK});
   text(d.date,R,120,{size:15,weight:700,spacing:4,color:INK,align:'right'});
 
   if(d.score.trim()){
@@ -1735,9 +1772,9 @@ function drawBackRiso(d,P){
       const x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
     ctx.closePath();ctx.stroke();
   }
-  text('BWC',cx,cy+34,{size:120,weight:700,color:P.paper,align:'center',spacing:-2});
-  text('부천 위스키 클럽',cx,Hc*.52+92,{size:26,weight:700,spacing:10,color:INK,align:'center'});
-  text('EST. 2025 · BUCHEON',cx,180,{size:16,weight:700,spacing:10,color:'rgba(242,237,225,.8)',align:'center'});
+  if(CLUB.mark) text(CLUB.mark,cx,cy+34,{size:fitMark(CLUB.mark,120),weight:700,color:P.paper,align:'center',spacing:-2});
+  text(CLUB.name,cx,Hc*.52+92,{size:26,weight:700,spacing:10,color:INK,align:'center'});
+  text(CLUB.sub,cx,180,{size:16,weight:700,spacing:10,color:'rgba(242,237,225,.8)',align:'center'});
   text('언제나 좋은 위스키, 좋은 사람들과',cx,Hc*.52+160,{size:26,weight:500,color:INK,align:'center'});
 
   const M=84,R=W-M;
@@ -1846,7 +1883,7 @@ function drawFrontStar(d,P){
 
   const M=96,R=W-M;
 
-  text('부천 위스키 클럽',M,116,{size:16,weight:600,spacing:9,color:GOLD});
+  text(CLUB.name,M,116,{size:16,weight:600,spacing:9,color:GOLD});
   text(d.date,R,116,{size:16,weight:600,spacing:4,color:MUT,align:'right'});
 
   /* 둥근 창 */
@@ -1938,7 +1975,7 @@ function drawFrontStar(d,P){
   if(d.theme)text(d.theme,M,fy,{size:17,weight:500,spacing:2,color:MUT});
   glow(()=>text(d.taster.trim()?`${d.taster}  ·  ${d.date}`:d.date,R,fy,
     {size:25,family:SERIF,color:INK,align:'right'}),hexA(P.amber,.6),14);
-  text('부천 위스키 클럽',R,fy+32,{size:12,weight:600,spacing:5,color:'rgba(246,239,228,.3)',align:'right'});
+  text(CLUB.name,R,fy+32,{size:12,weight:600,spacing:5,color:'rgba(246,239,228,.3)',align:'right'});
   grainAmt=P.grain;
 }
 
@@ -1965,9 +2002,9 @@ function drawBackStar(d,P){
   ctx.restore();
   constellation(cx,cy,178,d.vals,d.labels,P);
 
-  glow(()=>text('BWC',cx,cy+300,{size:96,weight:700,family:SERIF,color:INK,align:'center'}),hexA(P.amber,.7),24);
-  text('부천 위스키 클럽',cx,cy+356,{size:24,weight:600,spacing:10,color:GOLD,align:'center'});
-  text('EST. 2025 · BUCHEON',cx,300,{size:17,weight:600,spacing:10,color:MUT,align:'center'});
+  if(CLUB.mark) glow(()=>text(CLUB.mark,cx,cy+300,{size:fitMark(CLUB.mark,96),weight:700,family:SERIF,color:INK,align:'center'}),hexA(P.amber,.7),24);
+  text(CLUB.name,cx,cy+356,{size:24,weight:600,spacing:10,color:GOLD,align:'center'});
+  text(CLUB.sub,cx,300,{size:17,weight:600,spacing:10,color:MUT,align:'center'});
   text('언제나 좋은 위스키, 좋은 사람들과',cx,1160,{size:25,family:SERIF,color:P.note,align:'center'});
 
   const M=96,R=W-M;
@@ -2028,8 +2065,9 @@ function inkStamp(cx,cy,r,P){
   ctx.strokeStyle=P.accent;ctx.lineWidth=3.5;
   ctx.beginPath();ctx.arc(0,0,r,0,7);ctx.stroke();
   ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(0,0,r-9,0,7);ctx.stroke();
-  text('부천',0,-6,{size:r*.42,weight:700,spacing:2,color:P.accent,align:'center'});
-  text('위스키클럽',0,r*.42,{size:r*.2,weight:700,spacing:2,color:P.accent,align:'center'});
+  const sl=sealLines();
+  text(sl[0],0,-6,{size:r*.42,weight:700,spacing:2,color:P.accent,align:'center'});
+  if(sl[1]) text(sl[1],0,r*.42,{size:r*.2,weight:700,spacing:2,color:P.accent,align:'center'});
   ctx.restore();
 }
 
@@ -2044,7 +2082,7 @@ function drawFrontSheet(d,P){
   ctx.lineWidth=1;ctx.strokeRect(48,48,W-96,Hc-96);
 
   /* 머리글 */
-  text('부천 위스키 클럽',M,102,{size:15,weight:700,spacing:7,color:MUT});
+  text(CLUB.name,M,102,{size:15,weight:700,spacing:7,color:MUT});
   text('TASTING SHEET',R,102,{size:15,weight:700,spacing:7,color:ACC,align:'right'});
   formLine(M,R,120,P);
   ctx.fillStyle=INK;ctx.fillRect(M,126,R-M,3);
@@ -2170,7 +2208,7 @@ function drawBackSheet(d,P){
   ctx.lineWidth=1;ctx.strokeRect(48,48,W-96,Hc-96);
 
   const M=72,R=W-M;
-  text('부천 위스키 클럽',M,102,{size:15,weight:700,spacing:7,color:MUT});
+  text(CLUB.name,M,102,{size:15,weight:700,spacing:7,color:MUT});
   text('MEMO',R,102,{size:15,weight:700,spacing:7,color:ACC,align:'right'});
   ctx.fillStyle=INK;ctx.fillRect(M,120,R-M,3);
 
@@ -2190,7 +2228,7 @@ function drawBackSheet(d,P){
     ctx.closePath();ctx.stroke();
   }
   ctx.restore();
-  text('BWC',cx,cy+14,{size:52,weight:700,family:SERIF,color:INK,align:'center'});
+  if(CLUB.mark) text(CLUB.mark,cx,cy+14,{size:fitMark(CLUB.mark,52),weight:700,family:SERIF,color:INK,align:'center'});
 
   formLine(M,R,Hc-190,P);
   text(d.season,cx,Hc-146,{size:16,weight:700,spacing:7,color:ACC,align:'center'});
@@ -2224,7 +2262,7 @@ function drawFront(d){
   const AL=P.align==='center'?'center':'left';
 
   /* 머리 */
-  text('부천 위스키 클럽',M,128,{size:19,weight:600,spacing:8,color:ACC});
+  text(CLUB.name,M,128,{size:19,weight:600,spacing:8,color:ACC});
   text(d.date,R,128,{size:20,weight:600,spacing:3,color:MUT,align:'right'});
 
   /* 사진 */
@@ -2312,7 +2350,7 @@ function drawFront(d){
   if(d.theme)text(d.theme,M,fy,{size:18,weight:500,spacing:2,color:MUT});
   text(d.taster.trim()?`${d.taster}  ·  ${d.date}`:d.date,R,fy,
     {size:26,family:SERIF,color:P.dark?'rgba(255,248,235,.88)':INK,align:'right'});
-  text('부천 위스키 클럽',R,fy+34,{size:13,weight:600,spacing:5,color:MUT,align:'right'});
+  text(CLUB.name,R,fy+34,{size:13,weight:600,spacing:5,color:MUT,align:'right'});
 
   grainAmt=P.grain||0;   // 0 도 유효한 값 — 앞 테마의 결이 남지 않도록
 }
@@ -2388,9 +2426,9 @@ function drawBack(d){
     ctx.closePath();ctx.stroke();
   }
   ctx.globalAlpha=1;
-  text('BWC',cx,cy+30,{size:110,weight:700,family:SERIF,color:INK,align:'center'});
-  text('부천 위스키 클럽',cx,cy+96,{size:26,weight:600,spacing:10,color:ACC,align:'center'});
-  text('EST. 2025 · BUCHEON',cx,296,{size:19,weight:600,spacing:10,color:MUT,align:'center'});
+  text(CLUB.mark,cx,cy+30,{size:110,weight:700,family:SERIF,color:INK,align:'center'});
+  text(CLUB.name,cx,cy+96,{size:26,weight:600,spacing:10,color:ACC,align:'center'});
+  text(CLUB.sub,cx,296,{size:19,weight:600,spacing:10,color:MUT,align:'center'});
   text('언제나 좋은 위스키, 좋은 사람들과',cx,1020,{size:26,family:SERIF,color:P.note,align:'center'});
 
   const M=P.frame==='ornate'?96:78, R=W-M;
@@ -2471,6 +2509,7 @@ function remember(){
   try{
     localStorage.setItem(MEM_KEY,JSON.stringify({
       taster:$('taster').value.trim(),
+      club:{name:$('clubName').value,mark:$('clubMark').value,sub:$('clubSub').value},
       design:$('design').value,
       frame:$('frame').value,
       axisNames:axes.map(a=>a.n)
@@ -2482,6 +2521,11 @@ function restore(){
   try{ m=JSON.parse(localStorage.getItem(MEM_KEY)||'null'); }catch(e){}
   if(!m) return;
   if(m.taster && !$('taster').value.trim()) $('taster').value=m.taster;
+  if(m.club){
+    if(m.club.name!==undefined) $('clubName').value=m.club.name;
+    if(m.club.mark!==undefined) $('clubMark').value=m.club.mark;
+    if(m.club.sub !==undefined) $('clubSub').value =m.club.sub;
+  }
   if(m.design && [...$('design').options].some(o=>o.value===m.design))
     $('design').value=m.design;      // 목록에서 내려간 테마는 되살리지 않는다
   if(m.frame && FRAMES[m.frame]) $('frame').value=m.frame;
@@ -2982,12 +3026,14 @@ cv.addEventListener('pointermove',e=>{
    배포할 때 여기에 웹앱 주소를 한 번 넣어두면
    멤버들은 주소를 몰라도 바로 쓸 수 있습니다.
    ───────────────────────────────────────────── */
-const CONFIG={ API:'https://script.google.com/macros/s/AKfycbwe6ki74g4Rwgf-nOxNBaNzIVF7jMVW9oDNBr_PRN4zuIaKojZUnbJpyh6kJBb5KdWCyg/exec' };
+/* 「모임 관리」 스프레드시트에 붙인 Apps Script 웹앱 주소 (/exec 로 끝나야 합니다) */
+const CONFIG={ API:'PASTE_YOUR_EXEC_URL_HERE' };
 
 /* 주소창으로 시트를 지정할 수도 있다 — ?api=… */
 const Q=new URLSearchParams(location.search);
 if(Q.get('api')||CONFIG.API) $('api').value=Q.get('api')||CONFIG.API;
 
+$('clubName').value=CLUB.name; $('clubMark').value=CLUB.mark; $('clubSub').value=CLUB.sub;
 restore();
 renderOptions();renderAxes();renderChips();fillTheme();fillPreset();
 $('frameBox').style.display=$('design').value==='컬렉터'?'':'none';
